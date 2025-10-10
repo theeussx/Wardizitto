@@ -1,0 +1,5 @@
+node_modules
+.vscode
+config.json
+ultimo_servidor.json
+package-lock.json

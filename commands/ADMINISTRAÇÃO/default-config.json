@@ -1,0 +1,22 @@
+{
+  "name": "Comunidade Padrão",
+  "channels": [
+    { "name": "📢 INFORMAÇÕES", "type": "category" },
+    { "name": "💬 CHAT GERAL", "type": "category" },
+    { "name": "🎮 GAMES", "type": "category" },
+    { "name": "🛠 SUPORTE", "type": "category" },
+    { "name": "📢┃anúncios", "type": "text", "parent": "📢 INFORMAÇÕES", "permissions": [{ "role": "@everyone", "deny": ["SendMessages"] }] },
+    { "name": "📜┃regras", "type": "text", "parent": "📢 INFORMAÇÕES", "permissions": [{ "role": "@everyone", "deny": ["SendMessages"] }] },
+    { "name": "💬┃bate-papo", "type": "text", "parent": "💬 CHAT GERAL" },
+    { "name": "🎮┃games", "type": "text", "parent": "🎮 GAMES" },
+    { "name": "🎤┃voz-games", "type": "voice", "parent": "🎮 GAMES" },
+    { "name": "🛠┃suporte", "type": "text", "parent": "🛠 SUPORTE" }
+  ],
+  "roles": [
+    { "name": "👑 Dono", "color": "#FF4C4C", "permissions": ["Administrator"] },
+    { "name": "🛡️ Admin", "color": "#FFB84C", "permissions": ["ManageGuild", "ManageRoles", "ManageChannels", "KickMembers", "BanMembers"] },
+    { "name": "🔧 Staff", "color": "#4CFFB8", "permissions": ["ManageMessages", "MuteMembers", "DeafenMembers"] },
+    { "name": "💎 Membro", "color": "#4CC3FF", "permissions": [] }
+  ],
+  "emojis": []
+}
