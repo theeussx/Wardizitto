@@ -1,46 +1,22 @@
-const mysql = require("mysql2/promise");
-const config = require("../config.json");
-
-async function initMariaDB() {
+async function initMySQL(pool) {
   try {
-    const pool = mysql.createPool({
-      host: config.mariaDB.host,
-      user: config.mariaDB.user,
-      password: config.mariaDB.password,
-      database: config.mariaDB.database,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+    console.log("🔄 Inicializando tabelas do MySQL...");
 
-    console.log("🔄 Conectando ao MariaDB...");
-
-      
-    await pool.query(`
-CREATE TABLE IF NOT EXISTS hosted_bots (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  owner_id VARCHAR(32) NOT NULL,
-  bot_name VARCHAR(64) NOT NULL,
-  dir_name VARCHAR(191) NOT NULL UNIQUE,
-  token_enc TEXT NOT NULL,
-  status ENUM('ONLINE','OFFLINE','ERROR') DEFAULT 'OFFLINE',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-`);
-    console.log("tabela host criada");
-    // 📝 Tabela de Casamentos
-    await pool.query(`
+    // Tabela casamentos
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS casamentos (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(20) NOT NULL,
         parceiro_id VARCHAR(20) NOT NULL,
-        data BIGINT NOT NULL
+        data BIGINT NOT NULL,
+        KEY idx_user (user_id),
+        KEY idx_parceiro (parceiro_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'casamentos' criada/verificada com sucesso!");
 
-    // 🧠 Tabela de Gêneros
-    await pool.query(`
+    // Tabela generos
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS generos (
         user_id VARCHAR(20) PRIMARY KEY,
         genero ENUM('masculino', 'feminino') NOT NULL
@@ -48,8 +24,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'gêneros' criada/verificada com sucesso!");
 
-    // 🕓 Tabela de AFK Status
-    await pool.query(`
+    // Tabela afk_status
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS afk_status (
         user_id VARCHAR(20) PRIMARY KEY,
         mensagem TEXT NOT NULL,
@@ -58,21 +34,22 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'afk_status' criada/verificada com sucesso!");
 
-    // ⚠️ Tabela de Avisos
-    await pool.query(`
+    // Tabela warns
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS warns (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    guild_id VARCHAR(20) NOT NULL,
-    user_id VARCHAR(20) NOT NULL,
-    moderator_id VARCHAR(20) NOT NULL,
-    reason TEXT NOT NULL,
-    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-`);
-    console.log("✅ Tabela 'arnings' criada/verificada com sucesso!");
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        guild_id VARCHAR(20) NOT NULL,
+        user_id VARCHAR(20) NOT NULL,
+        moderator_id VARCHAR(20) NOT NULL,
+        reason TEXT NOT NULL,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_guild_user (guild_id, user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log("✅ Tabela 'warns' criada/verificada com sucesso!");
 
-    // 💰 Tabela de Economia - Usuários
-    await pool.query(`
+    // Tabela economia_usuarios
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS economia_usuarios (
         user_id VARCHAR(20) PRIMARY KEY,
         carteira INT DEFAULT 0,
@@ -83,8 +60,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'economia_usuarios' criada/verificada com sucesso!");
 
-    // 💼 Tabela de Economia - Profissões
-    await pool.query(`
+    // Tabela economia_profissoes
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS economia_profissoes (
         user_id VARCHAR(20) PRIMARY KEY,
         profissao VARCHAR(100) DEFAULT 'Nenhuma'
@@ -92,8 +69,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'economia_profissoes' criada/verificada com sucesso!");
 
-    // 🛍️ Tabela de Economia - Loja
-    await pool.query(`
+    // Tabela economia_loja
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS economia_loja (
         id INT AUTO_INCREMENT PRIMARY KEY,
         item_nome VARCHAR(100) NOT NULL,
@@ -103,21 +80,22 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'economia_loja' criada/verificada com sucesso!");
 
-    // 🎒 Tabela de Economia - Inventário
-    await pool.query(`
+    // Tabela economia_inventario
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS economia_inventario (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(20) NOT NULL,
         guild_id VARCHAR(20) NOT NULL,
         item_id INT NOT NULL,
         quantidade INT DEFAULT 1,
-        FOREIGN KEY (item_id) REFERENCES economia_loja(id) ON DELETE CASCADE
+        FOREIGN KEY (item_id) REFERENCES economia_loja(id) ON DELETE CASCADE,
+        KEY idx_user_guild (user_id, guild_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'economia_inventario' criada/verificada com sucesso!");
 
-    // 📊 Tabela de Estatísticas - bot_stats
-    await pool.query(`
+    // Tabela bot_stats
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS bot_stats (
         user_id VARCHAR(20) PRIMARY KEY,
         wins INT DEFAULT 0,
@@ -137,8 +115,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'bot_stats' criada/verificada com sucesso!");
 
-    // ⚔️ Tabela de Estatísticas - uvs_stats
-    await pool.query(`
+    // Tabela uvs_stats
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS uvs_stats (
         user_id VARCHAR(20) PRIMARY KEY,
         wins INT DEFAULT 0,
@@ -149,8 +127,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'uvs_stats' criada/verificada com sucesso!");
 
-    // 🎟️ Tabela principal de configuração de tickets
-    await pool.query(`
+    // Tabela ticket_config
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS ticket_config (
         guild_id VARCHAR(20) PRIMARY KEY,
         category_id VARCHAR(20) NOT NULL,
@@ -169,8 +147,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'ticket_config' criada/verificada com sucesso!");
 
-    // 📁 Tabela de tickets
-    await pool.query(`
+    // Tabela tickets
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS tickets (
         id VARCHAR(20) PRIMARY KEY,
         user_id VARCHAR(20) NOT NULL,
@@ -184,13 +162,14 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
         locked_by VARCHAR(20),
         locked_at BIGINT,
         archived_by VARCHAR(20),
-        archived_at BIGINT
+        archived_at BIGINT,
+        KEY idx_user_guild (user_id, guild_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'tickets' criada/verificada com sucesso!");
 
-    // 👥 Tabela de relacionamento usuário-ticket
-    await pool.query(`
+    // Tabela user_tickets
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS user_tickets (
         user_id VARCHAR(20) NOT NULL,
         ticket_id VARCHAR(20) NOT NULL,
@@ -201,8 +180,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'user_tickets' criada/verificada com sucesso!");
 
-    // 🕓 Histórico de tickets
-    await pool.query(`
+    // Tabela ticket_history
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS ticket_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
         ticket_id VARCHAR(20) NOT NULL,
@@ -212,13 +191,15 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
         opened_at BIGINT NOT NULL,
         closed_at BIGINT NOT NULL,
         closed_by VARCHAR(20) NOT NULL,
-        guild_id VARCHAR(20) NOT NULL
+        guild_id VARCHAR(20) NOT NULL,
+        KEY idx_ticket (ticket_id),
+        KEY idx_guild (guild_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'ticket_history' criada/verificada com sucesso!");
 
-    // 🎟️ Tabela de Enquetes
-    await pool.query(`
+    // Tabela polls
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS polls (
         message_id VARCHAR(20) PRIMARY KEY,
         guild_id VARCHAR(20) NOT NULL,
@@ -231,13 +212,14 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
         embed_color VARCHAR(7) DEFAULT '#0099ff',
         embed_footer TEXT,
         duration INT,
-        created_at BIGINT NOT NULL
+        created_at BIGINT NOT NULL,
+        KEY idx_guild (guild_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'polls' criada/verificada com sucesso!");
 
-    // 🔢 Tabela de Contagens
-    await pool.query(`
+    // Tabela contagens
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS contagens (
         guild_id VARCHAR(20) PRIMARY KEY,
         canal_id VARCHAR(20) NOT NULL,
@@ -247,8 +229,8 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'contagens' criada/verificada com sucesso!");
 
-    // 📝 Tabela de Configuração de Logs
-    await pool.query(`
+    // Tabela logs_config
+    await pool.execute(`
       CREATE TABLE IF NOT EXISTS logs_config (
         guild_id VARCHAR(20) PRIMARY KEY,
         log_channel_id VARCHAR(20) DEFAULT NULL,
@@ -262,11 +244,11 @@ CREATE TABLE IF NOT EXISTS hosted_bots (
     `);
     console.log("✅ Tabela 'logs_config' criada/verificada com sucesso!");
 
-    return pool;
+    console.log("✅ Todas as tabelas foram inicializadas com sucesso!");
   } catch (error) {
-    console.error("❌ Erro ao iniciar o MariaDB:", error);
+    console.error("❌ Erro ao iniciar o MySQL:", error);
     process.exit(1);
   }
 }
 
-module.exports = { initMariaDB };
+module.exports = { initMySQL };

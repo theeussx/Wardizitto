@@ -5,19 +5,6 @@ const {
   ButtonStyle,
   EmbedBuilder
 } = require('discord.js');
-const mysql = require('mysql2/promise');
-const config = require('../../config.json');
-
-// Criação do pool de conexões MySQL
-const pool = mysql.createPool({
-  host: config.mariaDB.host,
-  user: config.mariaDB.user,
-  password: config.mariaDB.password,
-  database: config.mariaDB.database,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -39,6 +26,7 @@ module.exports = {
         )
     ),
   async execute(interaction) {
+    const { pool, query } = require('../../handlers/db');
     const player1 = interaction.user;
     let player2 = interaction.options.getUser('oponente');
     if (!player2 || player2.id === interaction.client.user.id) {
@@ -56,7 +44,6 @@ module.exports = {
     let board, currentPlayer, lastGameResult = "", lastMove = null, moveHistory = [], message = null;
     const symbols = { [player1.id]: '❌', [player2.id]: '⭕' };
 
-    // Inicializa o tabuleiro e o currentPlayer
     board = [
       ['⬜', '⬜', '⬜'],
       ['⬜', '⬜', '⬜'],
@@ -65,16 +52,14 @@ module.exports = {
     currentPlayer = player1;
 
     // =============================================
-    // FUNÇÕES DE BANCO DE DADOS (MySQL)
+    // FUNÇÕES DE BANCO DE DADOS (Pool centralizado)
     // =============================================
 
-    // Garante que as tabelas existam
     async function ensureTables() {
-      const connection = await pool.getConnection();
       try {
-        await connection.query(`
+        await query(`
           CREATE TABLE IF NOT EXISTS bot_stats (
-            user_id VARCHAR(18) PRIMARY KEY,
+            user_id VARCHAR(20) PRIMARY KEY,
             wins INT DEFAULT 0,
             draws INT DEFAULT 0,
             losses INT DEFAULT 0,
@@ -88,111 +73,72 @@ module.exports = {
             dificil_wins INT DEFAULT 0,
             dificil_draws INT DEFAULT 0,
             dificil_losses INT DEFAULT 0
-          )
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
 
-        await connection.query(`
+        await query(`
           CREATE TABLE IF NOT EXISTS uvs_stats (
-            user_id VARCHAR(18) PRIMARY KEY,
+            user_id VARCHAR(20) PRIMARY KEY,
             wins INT DEFAULT 0,
             draws INT DEFAULT 0,
             losses INT DEFAULT 0,
             total INT DEFAULT 0
-          )
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
-      } finally {
-        connection.release();
+      } catch (error) {
+        console.error("❌ Erro ao criar tabelas:", error.message);
       }
     }
 
-    // Garante que as estatísticas existam para um usuário
     async function ensureStats(userId, isBot = false) {
       const table = isBot ? 'bot_stats' : 'uvs_stats';
-      const connection = await pool.getConnection();
       try {
-        await connection.query(`
-          INSERT IGNORE INTO ${table} (user_id)
-          VALUES (?)
-        `, [userId]);
-      } finally {
-        connection.release();
+        await query(`INSERT IGNORE INTO ${table} (user_id) VALUES (?)`, [userId]);
+      } catch (error) {
+        console.error(`❌ Erro ao garantir stats para ${userId}:`, error.message);
       }
     }
 
-    // Atualiza estatísticas contra o Bot
     async function updateBotStats(userId, result, difficulty) {
       await ensureStats(userId, true);
-      const connection = await pool.getConnection();
       try {
-        const baseUpdate = `
-          UPDATE bot_stats
-          SET total = total + 1,
-              wins = wins + ?,
-              draws = draws + ?,
-              losses = losses + ?
-          WHERE user_id = ?
-        `;
-
-        const difficultyUpdate = `
-          UPDATE bot_stats
-          SET ${difficulty}_wins = ${difficulty}_wins + ?,
-              ${difficulty}_draws = ${difficulty}_draws + ?,
-              ${difficulty}_losses = ${difficulty}_losses + ?
-          WHERE user_id = ?
-        `;
-
         const [wins, draws, losses] =
           result === 'win' ? [1, 0, 0] :
           result === 'draw' ? [0, 1, 0] : [0, 0, 1];
 
-        await connection.query(baseUpdate, [wins, draws, losses, userId]);
-        await connection.query(difficultyUpdate, [wins, draws, losses, userId]);
-      } finally {
-        connection.release();
+        await query(
+          `UPDATE bot_stats SET total = total + 1, wins = wins + ?, draws = draws + ?, losses = losses + ? WHERE user_id = ?`,
+          [wins, draws, losses, userId]
+        );
+
+        await query(
+          `UPDATE bot_stats SET ${difficulty}_wins = ${difficulty}_wins + ?, ${difficulty}_draws = ${difficulty}_draws + ?, ${difficulty}_losses = ${difficulty}_losses + ? WHERE user_id = ?`,
+          [wins, draws, losses, userId]
+        );
+      } catch (error) {
+        console.error("❌ Erro ao atualizar bot_stats:", error.message);
       }
     }
 
-    // Atualiza estatísticas PvP (vitória)
     async function updateUvsStats(winnerId, loserId) {
       await ensureStats(winnerId);
       await ensureStats(loserId);
-      const connection = await pool.getConnection();
       try {
-        await connection.query(`
-          UPDATE uvs_stats
-          SET wins = wins + 1, total = total + 1
-          WHERE user_id = ?
-        `, [winnerId]);
-
-        await connection.query(`
-          UPDATE uvs_stats
-          SET losses = losses + 1, total = total + 1
-          WHERE user_id = ?
-        `, [loserId]);
-      } finally {
-        connection.release();
+        await query(`UPDATE uvs_stats SET wins = wins + 1, total = total + 1 WHERE user_id = ?`, [winnerId]);
+        await query(`UPDATE uvs_stats SET losses = losses + 1, total = total + 1 WHERE user_id = ?`, [loserId]);
+      } catch (error) {
+        console.error("❌ Erro ao atualizar uvs_stats:", error.message);
       }
     }
 
-    // Atualiza estatísticas PvP (empate)
     async function updateUvsStatsDraw(playerA, playerB) {
       await ensureStats(playerA);
       await ensureStats(playerB);
-      const connection = await pool.getConnection();
       try {
-        await connection.query(`
-          UPDATE uvs_stats
-          SET draws = draws + 1, total = total + 1
-          WHERE user_id = ?
-        `, [playerA]);
-
-        await connection.query(`
-          UPDATE uvs_stats
-          SET draws = draws + 1, total = total + 1
-          WHERE user_id = ?
-        `, [playerB]);
-      } finally {
-        connection.release();
+        await query(`UPDATE uvs_stats SET draws = draws + 1, total = total + 1 WHERE user_id = ?`, [playerA]);
+        await query(`UPDATE uvs_stats SET draws = draws + 1, total = total + 1 WHERE user_id = ?`, [playerB]);
+      } catch (error) {
+        console.error("❌ Erro ao atualizar draws:", error.message);
       }
     }
 
@@ -200,13 +146,11 @@ module.exports = {
     // FUNÇÕES DO JOGO
     // =============================================
 
-    // Formata a última jogada
     function formatLastMove() {
       if (!lastMove) return "";
       return `Última jogada: **${lastMove.player}** colocou **${lastMove.symbol}** em (Linha ${lastMove.row + 1}, Coluna ${lastMove.col + 1}).`;
     }
 
-    // Formata o tabuleiro final
     function formatBoard() {
       return board
         .map(row => row
@@ -219,7 +163,6 @@ module.exports = {
         .join("\n");
     }
 
-    // Cria o embed do jogo
     function updateEmbed() {
       const opponentName = player2.id === 'bot' ? 'Bot' : player2.username;
       let description = `🔹 **${player1.username}** (X) vs **${opponentName}** (O)\n🎲 Turno de: ${currentPlayer.id === 'bot' ? 'Bot' : currentPlayer.username}`;
@@ -236,7 +179,6 @@ module.exports = {
       return embed;
     }
 
-    // Cria os botões do tabuleiro
     function createBoard() {
       const rows = [];
       for (let i = 0; i < board.length; i++) {
@@ -255,7 +197,6 @@ module.exports = {
       return rows;
     }
 
-    // Verifica se há vencedor
     function checkWinner() {
       for (let i = 0; i < 3; i++) {
         if (board[i][0] !== '⬜' && board[i][0] === board[i][1] && board[i][1] === board[i][2])
@@ -406,8 +347,7 @@ module.exports = {
           await buttonInteraction.update({ embeds: [embed], components: [] });
           moveCollector.stop();
           if (player2.id === 'bot') {
-            if (winnerSymbol === symbols[player1.id]) await updateBotStats(player1.id, 'win', dificuldade);
-            else await updateBotStats(player1.id, 'loss', dificuldade);
+            await updateBotStats(player1.id, winnerSymbol === symbols[player1.id] ? 'win' : 'loss', dificuldade);
           } else {
             const loser = currentPlayer.id === player1.id ? player2 : player1;
             await updateUvsStats(currentPlayer.id, loser.id);
@@ -422,8 +362,11 @@ module.exports = {
           embed.setColor(0x808080);
           await buttonInteraction.update({ embeds: [embed], components: [] });
           moveCollector.stop();
-          if (player2.id === 'bot') await updateBotStats(player1.id, 'draw', dificuldade);
-          else await updateUvsStatsDraw(player1.id, player2.id);
+          if (player2.id === 'bot') {
+            await updateBotStats(player1.id, 'draw', dificuldade);
+          } else {
+            await updateUvsStatsDraw(player1.id, player2.id);
+          }
           showPlayAgainButton();
           return;
         }

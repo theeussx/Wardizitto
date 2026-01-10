@@ -1,9 +1,6 @@
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require("discord.js");
 const { createCanvas, loadImage, registerFont } = require("@napi-rs/canvas");
 
-// Caso queira usar uma fonte externa (opcional)
-// registerFont('./fonts/YourFont.ttf', { family: 'CustomFont' });
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ship")

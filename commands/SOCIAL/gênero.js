@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const pool = require('../../handlers/db.js'); // sua conexão com MariaDB
+const pool = require('../../handlers/db.js');
 
 module.exports = {
   data: new SlashCommandBuilder()

@@ -6,7 +6,7 @@ const {
     ButtonStyle,
     PermissionFlagsBits
 } = require('discord.js');
-const db = require('../../handlers/db.js'); // conexão MariaDB
+const db = require('../../handlers/db.js');
 
 module.exports = {
     data: new SlashCommandBuilder()

@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const mysql = require('mysql2/promise');
 const config = require('./config.json');
+const { pool } = require('./handlers/db');
 const commandHandler = require('./handlers/commandHandler');
 const eventHandler = require('./handlers/eventHandler');
 
@@ -10,49 +10,38 @@ if (!config.token) {
   process.exit(1);
 }
 
-if (!config.mariaDB) {
-  console.error("❌ ERRO: Configuração do MariaDB não foi definida no config.json!");
+if (!config.MySQL || !config.MySQL.host || !config.MySQL.user || !config.MySQL.password || !config.MySQL.database) {
+  console.error("❌ ERRO: Configuração do MySQL não foi definida no config.json!");
   process.exit(1);
 }
 
-// Cria o client do bot com TODAS as intents
+// Cria o client do bot com intents essenciais
 const client = new Client({
   intents: Object.values(GatewayIntentBits),
 });
 
 client.commands = new Collection();
+client.MySQL = pool;
 
-// Conexão com o banco MariaDB
-async function connectDatabase() {
+// Inicia o bot
+async function start() {
   try {
-    client.mariaDB = await mysql.createPool({
-      host: config.mariaDB.host,
-      user: config.mariaDB.user,
-      password: config.mariaDB.password,
-      database: config.mariaDB.database,
-      waitForConnections: true,
-      connectionLimit: 10,
-    });
-    console.log('✅ Conectado ao MariaDB!');
+    console.log('✅ Conectado ao MySQL!');
+    commandHandler(client);
+    eventHandler(client);
+    await client.login(config.token);
   } catch (err) {
-    console.error('❌ Erro ao conectar ao MariaDB:', err);
+    console.error('❌ Erro ao iniciar o bot:', err);
     process.exit(1);
   }
 }
 
-// Inicia o bot
-connectDatabase().then(async () => {
-  commandHandler(client);
-  eventHandler(client);
-});
+start();
 
 // Mensagem ao iniciar
 client.on('ready', () => {
   console.log(`🤖 Bot online: ${client.user.tag}`);
 });
-
-// Login no Discord
-client.login(config.token);
 
 // Exporta o client
 module.exports = client;

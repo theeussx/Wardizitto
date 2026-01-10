@@ -6,19 +6,6 @@ const {
   ButtonStyle,
   ComponentType
 } = require('discord.js');
-const mysql = require('mysql2/promise');
-const config = require('../../config.json');
-
-// Configuração do pool de conexões MySQL
-const pool = mysql.createPool({
-  host: config.mariaDB.host,
-  user: config.mariaDB.user,
-  password: config.mariaDB.password,
-  database: config.mariaDB.database,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -39,6 +26,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const { query } = require('../../handlers/db');
     const sub = interaction.options.getSubcommand();
 
     // Emojis
@@ -53,21 +41,15 @@ module.exports = {
       const user = interaction.options.getUser('jogador') || interaction.user;
       
       try {
-        const connection = await pool.getConnection();
-        
-        // Busca estatísticas contra o bot
-        const [botRows] = await connection.query(
-          `SELECT * FROM bot_stats WHERE user_id = ?`,
-          [user.id]
-        );
-        
-        // Busca estatísticas PvP
-        const [uvsRows] = await connection.query(
-          `SELECT * FROM uvs_stats WHERE user_id = ?`,
-          [user.id]
-        );
-        
-        connection.release();
+        // Busca ambas as estatísticas em paralelo
+        const [botRows] = await Promise.all([
+          query(`SELECT * FROM bot_stats WHERE user_id = ?`, [user.id]),
+          query(`SELECT * FROM uvs_stats WHERE user_id = ?`, [user.id])
+        ]);
+
+        const [uvsRows] = await Promise.all([
+          query(`SELECT * FROM uvs_stats WHERE user_id = ?`, [user.id])
+        ]);
 
         const bot = botRows[0] || {};
         const pvp = uvsRows[0] || {};
@@ -93,7 +75,7 @@ module.exports = {
 
         return interaction.reply({ embeds: [embed], ephemeral: false });
       } catch (error) {
-        console.error('Erro ao buscar estatísticas:', error);
+        console.error('❌ Erro ao buscar estatísticas:', error.message);
         return interaction.reply({
           content: 'Ocorreu um erro ao buscar as estatísticas.',
           ephemeral: true
@@ -103,19 +85,11 @@ module.exports = {
 
     // ===== /placar ranking =====
     try {
-      const connection = await pool.getConnection();
-      
-      // Busca ranking contra o bot
-      const [botRanking] = await connection.query(
-        `SELECT user_id, wins FROM bot_stats ORDER BY wins DESC`
-      );
-      
-      // Busca ranking PvP
-      const [uvsRanking] = await connection.query(
-        `SELECT user_id, wins FROM uvs_stats ORDER BY wins DESC`
-      );
-      
-      connection.release();
+      // Busca ambas as rankings em paralelo
+      const [botRanking, uvsRanking] = await Promise.all([
+        query(`SELECT user_id, wins FROM bot_stats ORDER BY wins DESC LIMIT 100`),
+        query(`SELECT user_id, wins FROM uvs_stats ORDER BY wins DESC LIMIT 100`)
+      ]);
 
       const paginas = [];
       const totalPaginas = Math.ceil(Math.max(botRanking.length, uvsRanking.length) / 10);
@@ -194,11 +168,11 @@ module.exports = {
         try {
           await msg.edit({ components: [] });
         } catch (error) {
-          console.error('Erro ao remover componentes:', error);
+          console.error('❌ Erro ao remover componentes:', error.message);
         }
       });
     } catch (error) {
-      console.error('Erro ao gerar ranking:', error);
+      console.error('❌ Erro ao gerar ranking:', error.message);
       interaction.reply({
         content: 'Ocorreu um erro ao gerar o ranking.',
         ephemeral: true

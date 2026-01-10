@@ -5,8 +5,6 @@ const {
   ButtonBuilder,
   ButtonStyle
 } = require('discord.js');
-const mysql = require('mysql2/promise');
-const config = require('../../config.json');
 
 // Emojis personalizados
 const emojis = {
@@ -20,49 +18,6 @@ const emojis = {
   alianca: '💍'
 };
 
-// Conexão com MariaDB
-const pool = mysql.createPool({
-  host: config.mariaDB.host,
-  user: config.mariaDB.user,
-  password: config.mariaDB.password,
-  database: config.mariaDB.database,
-  waitForConnections: true,
-  connectionLimit: 10
-});
-
-// Busca parceiro do usuário
-async function getParceiroId(userId) {
-  const [rows] = await pool.query(
-    'SELECT parceiro_id FROM casamentos WHERE user_id = ?',
-    [userId]
-  );
-  return rows.length > 0 ? rows[0].parceiro_id : null;
-}
-
-// Envia mensagem de corno
-async function enviarMensagemCorno(client, userId, traidorNome, alvoNome, tipo = 'beijo') {
-  try {
-    const user = await client.users.fetch(userId);
-    let mensagem = '';
-
-    if (tipo === 'beijo') {
-      mensagem =
-        `${emojis.alerta} **ALERTA DE TRAIÇÃO!** ${emojis.alerta}\n\n` +
-        `${emojis.corno} Seu parceiro(a) **${traidorNome}** deu um beijo em **${alvoNome}**!\n` +
-        `${emojis.coracao} Esperamos que seja apenas um mal-entendido...`;
-    } else {
-      mensagem =
-        `${emojis.alerta} **TRAIÇÃO CONFIRMADA!** ${emojis.alerta}\n\n` +
-        `${emojis.corno} Seu parceiro(a) **${traidorNome}** recebeu e retribuiu um beijo de **${alvoNome}**!\n` +
-        `${emojis.coracao} A confiança está sendo colocada à prova.`;
-    }
-
-    await user.send({ content: mensagem });
-  } catch (err) {
-    console.error(`❌ Erro ao enviar DM para ${userId}:`, err);
-  }
-}
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('beijo')
@@ -74,7 +29,8 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    await interaction.deferReply(); // ✅ Removido { flags: 64 } (não é mais privado)
+    const { query } = require('../../handlers/db');
+    await interaction.deferReply();
 
     const usuario = interaction.options.getUser('usuario');
     const autor = interaction.user;
@@ -90,12 +46,25 @@ module.exports = {
       const data = await response.json();
       gif = data.url;
     } catch (err) {
-      console.error('Erro ao buscar gif:', err);
+      console.error('❌ Erro ao buscar gif:', err.message);
       return interaction.editReply({ content: `${emojis.alerta} Erro ao buscar o gif de beijo.` });
     }
 
-    const parceiroDoAutor = await getParceiroId(autor.id);
-    const parceiroDoAlvo = await getParceiroId(usuario.id);
+    // Busca parceiros em paralelo
+    let parceiroDoAutor, parceiroDoAlvo;
+    try {
+      const [autorRes, alvoRes] = await Promise.all([
+        query(`SELECT parceiro_id FROM casamentos WHERE user_id = ? LIMIT 1`, [autor.id]),
+        query(`SELECT parceiro_id FROM casamentos WHERE user_id = ? LIMIT 1`, [usuario.id])
+      ]);
+      
+      parceiroDoAutor = autorRes[0]?.parceiro_id;
+      parceiroDoAlvo = alvoRes[0]?.parceiro_id;
+    } catch (error) {
+      console.error('❌ Erro ao buscar parceiros:', error.message);
+      return interaction.editReply({ content: `${emojis.alerta} Erro ao buscar informações.` });
+    }
+
     const saoCasadosEntreSi =
       (parceiroDoAutor === usuario.id) || (parceiroDoAlvo === autor.id);
 
@@ -126,13 +95,27 @@ module.exports = {
 
     // CORNO 1: autor traiu
     if (parceiroDoAutor && parceiroDoAutor !== usuario.id) {
-      await enviarMensagemCorno(client, parceiroDoAutor, autor.username, usuario.username, 'beijo');
+      try {
+        const user = await client.users.fetch(parceiroDoAutor);
+        await user.send({
+          content: `${emojis.alerta} **ALERTA DE TRAIÇÃO!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${autor.username}** deu um beijo em **${usuario.username}**!\n${emojis.coracao} Esperamos que seja apenas um mal-entendido...`
+        });
+      } catch (err) {
+        console.error(`❌ Erro ao enviar DM para ${parceiroDoAutor}:`, err.message);
+      }
       embed.setDescription(embed.data.description + `\n\n${emojis.alerta} **${autor.username}** parece estar comprometido(a)... ${emojis.corno}`);
     }
 
     // CORNO 2: beijaram seu parceiro
     if (parceiroDoAlvo === autor.id && usuario.id !== autor.id) {
-      await enviarMensagemCorno(client, autor.id, autor.username, usuario.username, 'beijo');
+      try {
+        const user = await client.users.fetch(autor.id);
+        await user.send({
+          content: `${emojis.alerta} **ALERTA DE TRAIÇÃO!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${usuario.username}** recebeu e retribuiu um beijo de **${autor.username}**!\n${emojis.coracao} A confiança está sendo colocada à prova.`
+        });
+      } catch (err) {
+        console.error(`❌ Erro ao enviar DM para ${autor.id}:`, err.message);
+      }
     }
 
     const row = new ActionRowBuilder().addComponents(
@@ -150,7 +133,7 @@ module.exports = {
 
     collector.on('collect', async i => {
       if (i.user.id !== usuario.id) {
-        return i.reply({ content: `${emojis.alerta} Apenas ${usuario} pode retribuir esse beijo!`, ephemeral: true }); // ✅ Aqui pode manter ephemeral (só o alvo vê)
+        return i.reply({ content: `${emojis.alerta} Apenas ${usuario} pode retribuir esse beijo!`, ephemeral: true });
       }
 
       let novoGif;
@@ -159,7 +142,7 @@ module.exports = {
         const data = await response.json();
         novoGif = data.url;
       } catch (error) {
-        return i.reply({ content: `${emojis.alerta} Erro ao buscar novo gif.`, ephemeral: true }); // ✅ Pode manter ephemeral
+        return i.reply({ content: `${emojis.alerta} Erro ao buscar novo gif.`, ephemeral: true });
       }
 
       const retribuirEmbed = new EmbedBuilder()
@@ -175,11 +158,18 @@ module.exports = {
 
       // CORNO 3: alvo retribuiu, mas é casado com outro
       if (parceiroDoAlvo && parceiroDoAlvo !== autor.id) {
-        await enviarMensagemCorno(client, parceiroDoAlvo, usuario.username, autor.username, 'retribuicao');
+        try {
+          const user = await client.users.fetch(parceiroDoAlvo);
+          await user.send({
+            content: `${emojis.alerta} **TRAIÇÃO CONFIRMADA!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${usuario.username}** retribuiu um beijo de **${autor.username}**!\n${emojis.coracao} A confiança está sendo colocada à prova.`
+          });
+        } catch (err) {
+          console.error(`❌ Erro ao enviar DM para ${parceiroDoAlvo}:`, err.message);
+        }
         retribuirEmbed.setDescription(retribuirEmbed.data.description + `\n\n${emojis.alerta} **${usuario.username}** parece estar comprometido(a)... ${emojis.corno}`);
       }
 
-      await i.update({ embeds: [retribuirEmbed], components: [] }); // ✅ Público (sem flags)
+      await i.update({ embeds: [retribuirEmbed], components: [] });
     });
 
     collector.on('end', collected => {

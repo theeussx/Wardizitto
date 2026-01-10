@@ -8,8 +8,8 @@ const {
 
 // Emojis personalizados mais apropriados
 const emojis = {
-  slap: '🥊', // não há emoji personalizado direto, usamos um nativo expressivo
-  retribuir: '<:eg_fire:1353597119436685354>' // algo com energia ou provocação
+  slap: '🥊',
+  retribuir: '<:eg_fire:1353597119436685354>' 
 };
 
 module.exports = {
@@ -47,7 +47,7 @@ module.exports = {
       new ButtonBuilder()
         .setCustomId('revidar_tapa')
         .setLabel('Revidar Tapa')
-        .setEmoji('1353597119436685354') // eg_fire
+        .setEmoji('1353597119436685354')
         .setStyle(ButtonStyle.Danger)
     );
 
