@@ -10,12 +10,12 @@ const path = require('path');
 
 // Categorias de comandos
 const commandFolders = [
-    { name: 'MODERAÇÃO', label: 'Moderação', emoji: '<:eg_modadmin:1353597097076588617>' },
-    { name: 'ADMINISTRAÇÃO', label: 'Administração', emoji: '<:eg_modadmin:1353597141569769555>' },
-    { name: 'UTILIDADES', label: 'Utilidades', emoji: '<:eg_tools:1353597168912437341>' },
-    { name: 'DIVERSÃO', label: 'Diversão', emoji: '<:icons_tada:1353597708371497010>' },
-    { name: 'SOCIAL', label: 'Social', emoji: '<:eg_heart:1353597127091294208>' },
-    { name: 'ECONOMIA', label: 'Economia', emoji: '<:eg_premium:1353597152059985992>' }
+    { name: 'moderacao', label: 'Moderação', emoji: '<:eg_modadmin:1353597097076588617>' },
+    { name: 'admin', label: 'Administração', emoji: '<:eg_modadmin:1353597141569769555>' },
+    { name: 'util', label: 'Utilidades', emoji: '<:eg_tools:1353597168912437341>' },
+    { name: 'divercao', label: 'Diversão', emoji: '<:icons_tada:1353597708371497010>' },
+    { name: 'social', label: 'Social', emoji: '<:eg_heart:1353597127091294208>' },
+    { name: 'economia', label: 'Economia', emoji: '<:eg_premium:1353597152059985992>' }
 ];
 
 const categoryColors = {

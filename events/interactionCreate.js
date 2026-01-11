@@ -7,6 +7,7 @@ const cooldowns = new Map();
 // Importações externas fora do handler (melhor desempenho)
 const VerificacaoHandler = require('./util/Verificacao.js');
 const TicketHandler = require('./admin/TicketHandler.js');
+const EconomyHandler = require('./economia/EconomyHandler.js');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -75,8 +76,18 @@ module.exports = {
           'modal_ticket_appearance': TicketHandler,
           'select_ticket_category': TicketHandler,
           'select_ticket_channels': TicketHandler,
-          'select_ticket_role': TicketHandler
+          'select_ticket_role': TicketHandler,
+          'buy_item_select': EconomyHandler,
+          'deposit_all': EconomyHandler,
+          'withdraw_all': EconomyHandler
         };
+
+        // Handlers dinâmicos (prefixos)
+        if (interaction.isButton()) {
+            if (interaction.customId.startsWith('inventory_') || interaction.customId.startsWith('badges_')) {
+                return await EconomyHandler.execute(interaction, interaction.client);
+            }
+        }
 
         const handler = handlers[interaction.customId];
         if (handler) {

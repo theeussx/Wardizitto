@@ -52,10 +52,13 @@ async function initMySQL(pool) {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS economia_usuarios (
         user_id VARCHAR(20) PRIMARY KEY,
-        carteira INT DEFAULT 0,
-        banco INT DEFAULT 0,
+        carteira BIGINT DEFAULT 0,
+        banco BIGINT DEFAULT 0,
         ultima_daily DATETIME DEFAULT NULL,
-        ultima_trabalhar DATETIME DEFAULT NULL
+        ultima_trabalhar DATETIME DEFAULT NULL,
+        xp INT DEFAULT 0,
+        level INT DEFAULT 1,
+        sobre_mim VARCHAR(255) DEFAULT 'Use /sobre para mudar isso!'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'economia_usuarios' criada/verificada com sucesso!");
@@ -74,8 +77,11 @@ async function initMySQL(pool) {
       CREATE TABLE IF NOT EXISTS economia_loja (
         id INT AUTO_INCREMENT PRIMARY KEY,
         item_nome VARCHAR(100) NOT NULL,
-        preco INT NOT NULL,
-        descricao TEXT
+        preco BIGINT NOT NULL,
+        descricao TEXT,
+        tipo ENUM('role', 'item', 'background') DEFAULT 'item',
+        valor_extra VARCHAR(255) DEFAULT NULL,
+        disponivel_web BOOLEAN DEFAULT TRUE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
     console.log("✅ Tabela 'economia_loja' criada/verificada com sucesso!");
