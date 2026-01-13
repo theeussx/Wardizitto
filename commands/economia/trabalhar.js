@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { query } = require("../../handlers/db.js");
 const ms = require("ms");
+const { checkLevelUp } = require("../../events/economia/LevelUpHandler.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,6 +40,9 @@ module.exports = {
                  WHERE user_id = ?`,
                 [reward, xpGain, userId]
             );
+
+            // Verificar Level Up
+            await checkLevelUp(userId, interaction);
 
             const embed = new EmbedBuilder()
                 .setTitle("💼 Jornada de Trabalho")
