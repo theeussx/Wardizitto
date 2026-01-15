@@ -8,8 +8,9 @@ const {
   ComponentType,
   MessageFlags,
 } = require('discord.js');
-const { pool } = require('../../handlers/db.js');
-const { MySQL } = require('../../config.json');
+require('dotenv').config();
+const { query } = require('../../handlers/db.js');
+const database = process.env.DB_NAME;
 
 const ownerId = '1033922089436053535';
 
@@ -34,8 +35,8 @@ module.exports = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-      const [rows] = await pool.execute(`SHOW TABLES`);
-      const tableKey = `Tables_in_${MySQL.database}`;
+      const rows = await query(`SHOW TABLES`);
+      const tableKey = `Tables_in_${database}`;
       const tables = rows.map(row => row[tableKey]);
 
       if (tables.length === 0) {
@@ -113,7 +114,7 @@ module.exports = {
 
             if (btn.customId === 'confirm_delete') {
               try {
-                await pool.execute(`DROP TABLE IF EXISTS \`${selectedTable}\``);
+                await query(`DROP TABLE IF EXISTS \`${selectedTable}\``);
 
                 const disabledButtons = new ActionRowBuilder().addComponents(
                   btn.message.components[0].components.map(b =>
@@ -137,11 +138,11 @@ module.exports = {
               } catch (err) {
                 if (err.code === 'ER_ROW_IS_REFERENCED_2') {
                   // Buscar tabelas que referenciam essa
-                  const [constraints] = await pool.execute(`
+                  const constraints = await query(`
                     SELECT TABLE_NAME, CONSTRAINT_NAME
                     FROM information_schema.KEY_COLUMN_USAGE
                     WHERE REFERENCED_TABLE_NAME = ? AND CONSTRAINT_SCHEMA = ?;
-                  `, [selectedTable, mariaDB.database]);
+                  `, [selectedTable, database]);
 
                   const msgErro = constraints.length
                     ? constraints.map(c => `• **${c.TABLE_NAME}** → Constraint: \`${c.CONSTRAINT_NAME}\``).join('\n')

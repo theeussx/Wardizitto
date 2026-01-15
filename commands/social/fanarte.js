@@ -6,7 +6,8 @@ const {
   ButtonStyle,
   AttachmentBuilder
 } = require('discord.js');
-const config = require('../../config.json');
+require('dotenv').config();
+const canalId = process.env.CANAL_FANARTS_REVISAO;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -24,7 +25,6 @@ module.exports = {
   async execute(interaction) {
     const descricao = interaction.options.getString('descricao');
     const imagem = interaction.options.getAttachment('imagem');
-    const canalId = config.canal_fanarts_revisao;
     const canal = interaction.client.channels.cache.get(canalId);
 
     if (!canal) {

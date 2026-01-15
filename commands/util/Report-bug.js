@@ -5,7 +5,8 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require('discord.js');
-const config = require('../../config.json'); // deve conter o campo canal_bugs
+require('dotenv').config();
+const canalBugId = process.env.CANAL_BUGS;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,8 +23,6 @@ module.exports = {
   async execute(interaction) {
     const descricao = interaction.options.getString('descricao');
     const imagem = interaction.options.getAttachment('imagem');
-
-    const canalBugId = config.canal_bugs;
     const canal = interaction.client.channels.cache.get(canalBugId);
 
     if (!canal) {

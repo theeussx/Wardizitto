@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const config = require('../../config.json');
-const GROQ_API_KEY = config.groqApiKey;
+require('dotenv').config();
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const iso6391 = require('iso-639-1');
 
 // Função para exibir o código customizado: se o código for "pt", exibe "BR"; caso contrário, em maiúsculas.

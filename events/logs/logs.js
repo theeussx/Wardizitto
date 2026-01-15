@@ -1,13 +1,13 @@
 const { WebhookClient } = require('discord.js');
-const config = require('../../config.json');
+require('dotenv').config();
 
 module.exports = (client) => {
-    if (!config.webhookLogs || !config.webhookLogs.url) {
-        console.error('❌ ERRO: Webhook URL não está definido no config.json!');
+    if (!process.env.WEBHOOK_LOGS_URL) {
+        console.error('❌ ERRO: Webhook URL não está definido no .env!');
         return;
     }
 
-    const webhook = new WebhookClient({ url: config.webhookLogs.url });
+    const webhook = new WebhookClient({ url: process.env.WEBHOOK_LOGS_URL });
 
     client.on('guildCreate', async (guild) => {
         console.log(`✅ Bot foi adicionado ao servidor: ${guild.name} (${guild.id})`);

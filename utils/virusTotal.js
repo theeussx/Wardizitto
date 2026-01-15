@@ -1,5 +1,5 @@
 const axios = require('axios');
-const config = require('../config.json');
+require('dotenv').config();
 const FormData = require('form-data');
 
 async function uploadFileToVirusTotal(fileUrl) {
@@ -10,7 +10,7 @@ async function uploadFileToVirusTotal(fileUrl) {
 
         const upload = await axios.post('https://www.virustotal.com/api/v3/files', form, {
             headers: {
-                'x-apikey': config.virustotal_api_key,
+                'x-apikey': process.env.VIRUSTOTAL_API_KEY,
                 ...form.getHeaders()
             }
         });
@@ -26,7 +26,7 @@ async function analyzeUrl(url) {
     try {
         const encodedUrl = Buffer.from(url).toString('base64').replace(/=+$/, '');
         const res = await axios.get(`https://www.virustotal.com/api/v3/urls/${encodedUrl}`, {
-            headers: { 'x-apikey': config.virustotal_api_key }
+            headers: { 'x-apikey': process.env.VIRUSTOTAL_API_KEY }
         });
         return res.data.data;
     } catch (error) {
@@ -38,7 +38,7 @@ async function analyzeUrl(url) {
 async function analyzeIP(ip) {
     try {
         const res = await axios.get(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
-            headers: { 'x-apikey': config.virustotal_api_key }
+            headers: { 'x-apikey': process.env.VIRUSTOTAL_API_KEY }
         });
         return res.data.data;
     } catch (error) {
@@ -50,7 +50,7 @@ async function analyzeIP(ip) {
 async function analyzeDomain(domain) {
     try {
         const res = await axios.get(`https://www.virustotal.com/api/v3/domains/${domain}`, {
-            headers: { 'x-apikey': config.virustotal_api_key }
+            headers: { 'x-apikey': process.env.VIRUSTOTAL_API_KEY }
         });
         return res.data.data;
     } catch (error) {
@@ -62,7 +62,7 @@ async function analyzeDomain(domain) {
 async function fetchAnalysis(id) {
     try {
         const res = await axios.get(`https://www.virustotal.com/api/v3/analyses/${id}`, {
-            headers: { 'x-apikey': config.virustotal_api_key }
+            headers: { 'x-apikey': process.env.VIRUSTOTAL_API_KEY }
         });
 
         if (res.data.data.attributes.status === 'completed') {

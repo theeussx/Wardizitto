@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-const mysql = require('mysql2/promise');
-const { mariaDB } = require('../../config.json');
+require('dotenv').config();
+const { query } = require('../../handlers/db');
+const database = process.env.DB_NAME;
 
 const ownerId = '1033922089436053535';
 
@@ -34,37 +35,21 @@ module.exports = {
 
     await interaction.deferReply({ ephemeral: true });
 
-    let connection;
-    try {
-      connection = await mysql.createConnection({
-        host: mariaDB.host,
-        user: mariaDB.user,
-        password: mariaDB.password,
-        database: mariaDB.database,
-      });
-    } catch (err) {
-      console.error('Erro ao conectar no banco:', err);
-      return interaction.editReply({ content: 'Erro ao conectar no banco de dados.' });
-    }
-
     let tableStats, innodbValue;
     try {
-      const [tables] = await connection.execute(`
+      tableStats = await query(`
         SELECT table_name AS Tabela,
                ROUND((data_length + index_length) / 1024 / 1024, 2) AS Tamanho_MB
         FROM information_schema.TABLES
         WHERE table_schema = ?
         ORDER BY (data_length + index_length) DESC;
-      `, [mariaDB.database]);
-      tableStats = tables;
+      `, [database]);
 
-      const [innodb] = await connection.execute("SHOW VARIABLES LIKE 'innodb_data_file_path'");
+      const innodb = await query("SHOW VARIABLES LIKE 'innodb_data_file_path'");
       if (innodb.length > 0) innodbValue = innodb[0].Value;
     } catch (err) {
       console.error('Erro ao executar a consulta:', err);
       return interaction.editReply({ content: 'Erro ao buscar dados do banco.' });
-    } finally {
-      if (connection) await connection.end();
     }
 
     if (!tableStats || tableStats.length === 0) {
@@ -88,7 +73,7 @@ module.exports = {
       .setColor('#1abc9c')
       .setThumbnail('https://mightward.abccloud.com.br/images/logo.png')
       .setDescription([
-        `**Banco:** \`${mariaDB.database}\``,
+        `**Banco:** \`${database}\``,
         `**Uso Total:** \`${totalUsedStr} MB\``,
         `**Limite:** \`${limitStr}\``,
         `**Espaço Livre:** \`${freeStr}\``,
@@ -124,17 +109,7 @@ module.exports = {
       let contentRows;
 
       try {
-        const conn = await mysql.createConnection({
-          host: mariaDB.host,
-          user: mariaDB.user,
-          password: mariaDB.password,
-          database: mariaDB.database,
-        });
-
-        const [rows] = await conn.execute(`SELECT * FROM \`${selectedTable}\` LIMIT 10`);
-        await conn.end();
-
-        contentRows = rows;
+        contentRows = await query(`SELECT * FROM \`${selectedTable}\` LIMIT 10`);
       } catch (err) {
         console.error('Erro ao buscar conteúdo da tabela:', err);
         return i.reply({ content: 'Erro ao buscar conteúdo da tabela.', ephemeral: true });

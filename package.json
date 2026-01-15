@@ -2,7 +2,9 @@
   "name": "bot-adimistracao",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
+    "scripts": {
+    "prod": "NODE_ENV=prod node index.js",
+    "dev": "NODE_ENV=dev node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

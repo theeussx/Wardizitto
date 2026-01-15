@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, ChannelType, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const fs = require('fs/promises');
 const path = require('path');
-const { groqApiKey, groqModel } = require('../../config.json');
+require('dotenv').config();
+const groqApiKey = process.env.GROQ_API_KEY;
+const groqModel = process.env.GROQ_MODEL;
 const defaultConfig = require('./default-config.json');
 
 const delay = (ms) => new Promise(res => setTimeout(res, ms));
@@ -37,8 +39,11 @@ async function safeReply(interaction, options) {
  */
 async function gerarConfigIA(descricao) {
   try {
+    if (!groqApiKey) {
+      throw new Error('Chave da API Groq não configurada no .env.');
+    }
     if (!groqModel) {
-      throw new Error('Nome do modelo Groq não configurado em config.json.');
+      throw new Error('Nome do modelo Groq não configurado no .env.');
     }
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

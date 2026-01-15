@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
+require('dotenv').config();
 const db = require('../../handlers/db');
-const config = require('../../config.json');
+const contaSistemaId = process.env.CONTA_SISTEMA_ID || '1033922089436053535';
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,7 +18,6 @@ module.exports = {
   async execute(interaction) {
     const userId = interaction.user.id;
     const quantiaInput = interaction.options.getString('quantia').toLowerCase();
-    const contaSistemaId = config.contaSistemaId || '1033922089436053535';
 
     // Emojis personalizados
     const emojis = {

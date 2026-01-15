@@ -1,12 +1,12 @@
 const mysql = require("mysql2/promise");
-const config = require("../config.json");
 
-// Cria o pool de conexões com o MySQL otimizado
+// Cria o pool de conexões com o MySQL otimizado usando variáveis de ambiente
 const pool = mysql.createPool({
-  host: config.MySQL.host,
-  user: config.MySQL.user,
-  password: config.MySQL.password,
-  database: config.MySQL.database,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 10,
