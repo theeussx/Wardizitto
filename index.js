@@ -24,6 +24,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+client.prefixCommands = new Collection();
 client.MySQL = pool;
 
 // Inicia o bot
@@ -44,6 +45,27 @@ start();
 // Mensagem ao iniciar
 client.on('ready', () => {
   console.log(`🤖 Bot online: ${client.user.tag}`);
+});
+
+// Handler de Comandos por Prefixo
+client.on('messageCreate', async (message) => {
+  if (message.author.bot || !message.guild) return;
+  
+  const prefix = process.env.PREFIX || '!';
+  if (!message.content.startsWith(prefix)) return;
+
+  const args = message.content.slice(prefix.length).trim().split(/ +/);
+  const commandName = args.shift().toLowerCase();
+
+  const command = client.prefixCommands.get(commandName);
+  if (!command) return;
+
+  try {
+    await command.run(client, message, args);
+  } catch (error) {
+    console.error(`Erro ao executar comando de prefixo ${commandName}:`, error);
+    message.reply('❌ Ocorreu um erro ao executar este comando.');
+  }
 });
 
 // Exporta o client
