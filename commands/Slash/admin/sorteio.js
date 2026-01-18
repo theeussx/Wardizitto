@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-// Função para obter emojis personalizados
 function getEmoji(name) {
   const emojis = {
     gift: '<:icons_gift:1353597120761958462>',
@@ -28,7 +27,7 @@ module.exports = {
       option.setName('vencedores')
         .setDescription('Número de vencedores')
         .setRequired(true))
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator), // Apenas admins podem usar
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
