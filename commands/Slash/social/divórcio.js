@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } = require('discord.js');
-const { pool } = require('../../handlers/db.js');
+const { pool } = require('../../../handlers/db.js');
 
 module.exports = {
   data: new SlashCommandBuilder()

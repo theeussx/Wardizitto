@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const emojis = require('../../databases/emojis.json'); // Caminho dos emojis
+const emojis = require('../../../databases/emojis.json'); // Caminho dos emojis
 
 // Função para obter emojis com fallback
 function getEmoji(name, animated = false) {

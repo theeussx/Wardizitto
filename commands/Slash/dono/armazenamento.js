@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 require('dotenv').config();
-const { query } = require('../../handlers/db');
+const { query } = require('../../../handlers/db');
 const database = process.env.DB_NAME;
 
 const ownerId = '1033922089436053535';

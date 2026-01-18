@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-const emojis = require('../../databases/emojis.json');
+const emojis = require('../../../databases/emojis.json');
 
 // Função que gera a string do emoji com base no ID
 function getEmoji(name, animated = false) {

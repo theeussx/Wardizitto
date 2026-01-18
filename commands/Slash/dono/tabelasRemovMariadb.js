@@ -9,7 +9,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 require('dotenv').config();
-const { query } = require('../../handlers/db.js');
+const { query } = require('../../../handlers/db.js');
 const database = process.env.DB_NAME;
 
 const ownerId = '1033922089436053535';

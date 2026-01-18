@@ -22,9 +22,12 @@ module.exports = {
                 .setPlaceholder("Escolha uma categoria...")
                 .addOptions([
                     { label: "Administração", value: "admin", emoji: "🛡️", description: "Comandos para gerenciar o servidor." },
-                    { label: "Economia", value: "economy", emoji: "💰", description: "Ganhe Wardcoins e suba de nível." },
+                    { label: "Economia", value: "economia", emoji: "💰", description: "Ganhe Wardcoins e suba de nível." },
                     { label: "Utilidades", value: "util", emoji: "🛠️", description: "Ferramentas úteis para o dia a dia." },
-                    { label: "Diversão", value: "fun", emoji: "🎮", description: "Jogos e interações sociais." }
+                    { label: "Diversão", value: "diversao", emoji: "🎮", description: "Jogos e interações sociais." },
+                    { label: "Moderação", value: "moderacao", emoji: "🔨", description: "Comandos de moderação." },
+                    { label: "Social", value: "social", emoji: "👥", description: "Interações sociais." },
+                    { label: "Dono", value: "dono", emoji: "👑", description: "Comandos exclusivos do dono." }
                 ])
         );
 
@@ -36,25 +39,31 @@ module.exports = {
         collector.on("collect", async i => {
             const category = i.values[0];
             let categoryName = "";
-            let commandsList = "";
+            let emoji = "";
 
-            if (category === "admin") {
-                categoryName = "🛡️ Administração";
-                commandsList = "prefix: `clear`, `lock`, `unlock`\nslash: `setup-tickets`, `cargo`";
-            } else if (category === "economy") {
-                categoryName = "💰 Economia";
-                commandsList = "prefix: `saldo`\nslash: `perfil`, `daily`, `trabalhar`, `apostar`, `rank`";
-            } else if (category === "util") {
-                categoryName = "🛠️ Utilidades";
-                commandsList = "prefix: `ajuda`, `ping`, `userinfo`, `serverinfo`, `avatar`";
-            } else if (category === "fun") {
-                categoryName = "🎮 Diversão";
-                commandsList = "slash: `jokenpo`, `ship`, `abraço`, `beijo`";
+            const categoryMap = {
+                admin: { name: "🛡️ Administração", emoji: "🛡️" },
+                economia: { name: "💰 Economia", emoji: "💰" },
+                util: { name: "🛠️ Utilidades", emoji: "🛠️" },
+                diversao: { name: "🎮 Diversão", emoji: "🎮" },
+                moderacao: { name: "🔨 Moderação", emoji: "🔨" },
+                social: { name: "👥 Social", emoji: "👥" },
+                dono: { name: "👑 Dono", emoji: "👑" }
+            };
+
+            if (categoryMap[category]) {
+                categoryName = categoryMap[category].name;
+                emoji = categoryMap[category].emoji;
+            } else {
+                categoryName = "Categoria Desconhecida";
             }
+
+            const prefixCmds = client.prefixCommands.filter(cmd => cmd.category === category).map(cmd => `\`${cmd.name}\``).join(', ') || 'Nenhum';
+            const slashCmds = client.commands.filter(cmd => cmd.category === category).map(cmd => `\`/${cmd.data.name}\``).join(', ') || 'Nenhum';
 
             const newEmbed = new EmbedBuilder()
                 .setTitle(categoryName)
-                .setDescription(`Aqui estão os comandos desta categoria:\n\n${commandsList}`)
+                .setDescription(`**Comandos de Prefixo:**\n${prefixCmds}\n\n**Comandos Slash:**\n${slashCmds}`)
                 .setColor("#5865F2")
                 .setTimestamp();
 

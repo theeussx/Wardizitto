@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { query } = require("../../handlers/db.js");
+const { query } = require("../../../handlers/db.js");
 
 // Função para garantir que o usuário exista no banco de dados
 async function ensureUser(userId) {

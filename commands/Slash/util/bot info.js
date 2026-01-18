@@ -7,7 +7,7 @@ const {
 } = require('discord.js');
 const os = require('os');
 const moment = require('moment');
-const packageJson = require('../../package.json');
+const packageJson = require('../../../package.json');
 
 const emojis = {
     bot: '<:eg_bot:1353597099563946026>',

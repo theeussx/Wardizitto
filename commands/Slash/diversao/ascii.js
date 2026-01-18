@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { AttachmentBuilder } = require('discord.js');
 const figlet = require('figlet');
-const emojis = require('../../databases/emojis.json'); // Caminho dos emojis
+const emojis = require('../../../databases/emojis.json');
 
 // Função para obter emojis
 function getEmoji(name, animated = false) {

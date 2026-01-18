@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 require('dotenv').config();
-const db = require('../../handlers/db');
+const db = require('../../../handlers/db');
 const contaSistemaId = process.env.CONTA_SISTEMA_ID || '1033922089436053535';
 
 module.exports = {

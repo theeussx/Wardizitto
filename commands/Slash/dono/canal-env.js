@@ -6,7 +6,7 @@ const {
 } = require('discord.js');
 
 const ownerId = '1033922089436053535';
-const { static: emojis } = require('../../databases/emojis.json'); // Ajuste o caminho conforme a estrutura do seu projeto
+const { static: emojis } = require('../../../databases/emojis.json'); // Ajuste o caminho conforme a estrutura do seu projeto
 
 module.exports = {
   data: new SlashCommandBuilder()

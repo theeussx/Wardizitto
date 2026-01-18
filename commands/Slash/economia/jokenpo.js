@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { query } = require("../../handlers/db.js");
-const { checkLevelUp } = require("../../events/economia/LevelUpHandler.js");
+const { query } = require("../../../handlers/db.js");
+const { checkLevelUp } = require("../../../events/economia/LevelUpHandler.js");
 
 module.exports = {
     data: new SlashCommandBuilder()

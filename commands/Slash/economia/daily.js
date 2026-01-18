@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { query } = require("../../handlers/db.js");
+const { query } = require("../../../handlers/db.js");
 const ms = require("ms");
 
 module.exports = {

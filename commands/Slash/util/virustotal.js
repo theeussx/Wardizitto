@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { uploadFileToVirusTotal, analyzeUrl, analyzeIP, analyzeDomain, fetchAnalysis } = require('../../utils/virusTotal');
+const { uploadFileToVirusTotal, analyzeUrl, analyzeIP, analyzeDomain, fetchAnalysis } = require('../../../utils/virusTotal');
 const cooldown = new Set();
 
 const EMOJIS = {

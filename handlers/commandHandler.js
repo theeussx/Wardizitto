@@ -19,8 +19,10 @@ module.exports = (client) => {
         try {
           const command = require(filePath);
           if (command?.data && typeof command.execute === 'function') {
+            const category = path.basename(path.dirname(filePath));
+            command.category = category;
             client.commands.set(command.data.name, command);
-            console.log(`✅ Slash Command carregado: ${command.data.name}`);
+            console.log(`✅ Slash Command carregado: ${command.data.name} (categoria: ${category})`);
           }
         } catch (err) {
           console.error(`❌ Erro ao carregar Slash Command ${file}:`, err);
@@ -42,8 +44,10 @@ module.exports = (client) => {
         try {
           const command = require(filePath);
           if (command?.name && typeof command.run === 'function') {
+            const category = path.basename(path.dirname(filePath));
+            command.category = category;
             client.prefixCommands.set(command.name, command);
-            console.log(`✅ Comando de Prefixo carregado: ${command.name}`);
+            console.log(`✅ Comando de Prefixo carregado: ${command.name} (categoria: ${category})`);
           }
         } catch (err) {
           console.error(`❌ Erro ao carregar comando de Prefixo ${file}:`, err);

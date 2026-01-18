@@ -8,7 +8,7 @@ const {
 } = require('discord.js');
 const { format, differenceInDays } = require('date-fns');
 const { ptBR } = require('date-fns/locale');
-const { pool } = require('../../handlers/db');
+const { pool } = require('../../../handlers/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
