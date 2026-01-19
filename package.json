@@ -2,7 +2,7 @@
   "name": "bot-adimistracao",
   "version": "1.0.0",
   "main": "index.js",
-    "scripts": {
+  "scripts": {
     "prod": "NODE_ENV=prod node index.js",
     "dev": "NODE_ENV=dev node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -27,7 +27,7 @@
     "discord-html-transcripts": "^3.2.0",
     "discord.js": "^14.19.3",
     "dotenv": "^17.2.3",
-    "erela.js": "^2.4.0",
+    "erela.js": "^2.3.3",
     "figlet": "^1.8.0",
     "groq-sdk": "^0.23.0",
     "iso-639-1": "^3.1.5",

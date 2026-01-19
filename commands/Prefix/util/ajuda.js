@@ -1,73 +1,124 @@
-const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require("discord.js");
+const { 
+    ContainerBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    MessageFlags, 
+    ActionRowBuilder,
+    SeparatorBuilder 
+} = require("discord.js");
+const fs = require("fs");
+const path = require("path");
 
 module.exports = {
     name: "ajuda",
-    description: "Central de ajuda do Wardizitto.",
-    run: async (client, message, args) => {
-        const embed = new EmbedBuilder()
-            .setTitle("📚 Central de Comandos - Wardizitto")
-            .setDescription("Olá! Eu sou o **Wardizitto**, seu bot de administração e economia. Use o menu abaixo para explorar minhas funcionalidades!")
-            .addFields(
-                { name: "✨ Comandos de Prefixo", value: `Atualmente possuo **${client.prefixCommands.size}** comandos de prefixo.`, inline: true },
-                { name: "🚀 Comandos Slash", value: `Atualmente possuo **${client.commands.size}** comandos slash.`, inline: true }
-            )
-            .setColor("#5865F2")
-            .setThumbnail(client.user.displayAvatarURL())
-            .setFooter({ text: `Solicitado por ${message.author.username}`, iconURL: message.author.displayAvatarURL() })
-            .setTimestamp();
+    description: "Central de ajuda interativa para comandos do bot.",
+    run: async (client, message) => {
+        const rootDir = process.cwd();
+        
+        // --- CONFIGURAÇÃO: Pastas bloqueadas ---
+        const blockedCategories = ["dono"];
 
-        const menu = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId("help_menu")
-                .setPlaceholder("Escolha uma categoria...")
-                .addOptions([
-                    { label: "Administração", value: "admin", emoji: "🛡️", description: "Comandos para gerenciar o servidor." },
-                    { label: "Economia", value: "economia", emoji: "💰", description: "Ganhe Wardcoins e suba de nível." },
-                    { label: "Utilidades", value: "util", emoji: "🛠️", description: "Ferramentas úteis para o dia a dia." },
-                    { label: "Diversão", value: "diversao", emoji: "🎮", description: "Jogos e interações sociais." },
-                    { label: "Moderação", value: "moderacao", emoji: "🔨", description: "Comandos de moderação." },
-                    { label: "Social", value: "social", emoji: "👥", description: "Interações sociais." },
-                    { label: "Dono", value: "dono", emoji: "👑", description: "Comandos exclusivos do dono." }
-                ])
-        );
+        const createHome = () => {
+            return new ContainerBuilder()
+                .setAccentColor(0x5865F2)
+                .addTextDisplayComponents(t => t.setContent("## 💠 Central de Comandos — Wardizitto\n> Selecione uma interface abaixo para navegar entre os comandos disponíveis."))
+                .addSeparatorComponents(new SeparatorBuilder())
+                .addSectionComponents(s => s
+                    .addTextDisplayComponents(t => t.setContent("✨ **integração de comandos prefixo**\nComandos via prefixo."))
+                    .setButtonAccessory(new ButtonBuilder().setCustomId("list_prefix").setLabel("Acessar").setStyle(ButtonStyle.Primary))
+                )
+                .addSectionComponents(s => s
+                    .addTextDisplayComponents(t => t.setContent("🚀 **Integração de comandos Slash**\nComandos nativos de última geração."))
+                    .setButtonAccessory(new ButtonBuilder().setCustomId("list_slash").setLabel("Acessar").setStyle(ButtonStyle.Success))
+                );
+        };
 
-        const msg = await message.reply({ embeds: [embed], components: [menu] });
+        const msg = await message.reply({ 
+            components: [createHome()], 
+            flags: [MessageFlags.IsComponentsV2] 
+        });
 
-        const filter = i => i.customId === "help_menu" && i.user.id === message.author.id;
-        const collector = msg.createMessageComponentCollector({ filter, time: 60000 });
+        const collector = msg.createMessageComponentCollector({
+            filter: i => i.user.id === message.author.id,
+            time: 300000
+        });
 
-        collector.on("collect", async i => {
-            const category = i.values[0];
-            let categoryName = "";
-            let emoji = "";
+        collector.on("collect", async (i) => {
+            
+    
+            if (i.customId === "list_prefix" || i.customId === "list_slash") {
+                const isPrefix = i.customId === "list_prefix";
+                const typePath = isPrefix ? "Prefix" : "Slash";
+                const basePath = path.join(rootDir, "commands", typePath);
 
-            const categoryMap = {
-                admin: { name: "🛡️ Administração", emoji: "🛡️" },
-                economia: { name: "💰 Economia", emoji: "💰" },
-                util: { name: "🛠️ Utilidades", emoji: "🛠️" },
-                diversao: { name: "🎮 Diversão", emoji: "🎮" },
-                moderacao: { name: "🔨 Moderação", emoji: "🔨" },
-                social: { name: "👥 Social", emoji: "👥" },
-                dono: { name: "👑 Dono", emoji: "👑" }
-            };
+                if (!fs.existsSync(basePath)) return i.reply({ content: "❌ Falha crítica: Diretório não mapeado.", ephemeral: true });
 
-            if (categoryMap[category]) {
-                categoryName = categoryMap[category].name;
-                emoji = categoryMap[category].emoji;
-            } else {
-                categoryName = "Categoria Desconhecida";
+                
+                const categories = fs.readdirSync(basePath)
+                    .filter(f => fs.statSync(path.join(basePath, f)).isDirectory())
+                    .filter(cat => !blockedCategories.includes(cat.toLowerCase()));
+                
+                const catContainer = new ContainerBuilder()
+                    .setAccentColor(0x57F287)
+                    .addTextDisplayComponents(t => t.setContent(`### 📂 Comandos Disponíveis — ${isPrefix ? "Prefixo" : "Slash"}\nEscolha uma categoria para listar os comandos:`));
+
+                categories.forEach(cat => {
+                    catContainer.addSectionComponents(s => s
+                        .addTextDisplayComponents(t => t.setContent(`📦 **${cat.toUpperCase()}**\n*Categoria de comandos de ${cat}*`))
+                        .setButtonAccessory(new ButtonBuilder()
+                            .setCustomId(`view_${isPrefix ? "p" : "s"}_${cat}`)
+                            .setLabel("Listar")
+                            .setStyle(ButtonStyle.Secondary))
+                    );
+                });
+
+                const backRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId("go_home").setLabel("Menu Inicial").setStyle(ButtonStyle.Secondary).setEmoji("🏠")
+                );
+
+                await i.update({ components: [catContainer, backRow] });
             }
 
-            const prefixCmds = client.prefixCommands.filter(cmd => cmd.category === category).map(cmd => `\`${cmd.name}\``).join(', ') || 'Nenhum';
-            const slashCmds = client.commands.filter(cmd => cmd.category === category).map(cmd => `\`/${cmd.data.name}\``).join(', ') || 'Nenhum';
+            
+            if (i.customId.startsWith("view_")) {
+                const [_, type, category] = i.customId.split("_");
+                const isPrefix = type === "p";
+                
+                const cmdSource = isPrefix ? client.prefixCommands : client.commands;
+                const commands = cmdSource.filter(c => (c.category || "").toLowerCase() === category.toLowerCase());
 
-            const newEmbed = new EmbedBuilder()
-                .setTitle(categoryName)
-                .setDescription(`**Comandos de Prefixo:**\n${prefixCmds}\n\n**Comandos Slash:**\n${slashCmds}`)
-                .setColor("#5865F2")
-                .setTimestamp();
+                const cmdContainer = new ContainerBuilder()
+                    .setAccentColor(0xEB459E)
+                    .addTextDisplayComponents(t => t.setContent(`### 📄 comandos: ${category.toUpperCase()}`))
+                    .addSeparatorComponents(new SeparatorBuilder());
 
-            await i.update({ embeds: [newEmbed] });
+                if (commands.size === 0) {
+                    cmdContainer.addTextDisplayComponents(t => t.setContent("> ℹ️ _Nenhuma entrada de comando encontrada neste setor._"));
+                } else {
+                    const commandList = commands.map(c => {
+                        const name = isPrefix ? c.name : c.data.name;
+                        const desc = isPrefix ? c.description : c.data.description;
+                        return `**\`${isPrefix ? '!' : '/'}${name}\`**\n> ${desc || "Descrição pendente no arquivo."}`;
+                    }).join("\n\n");
+
+                    cmdContainer.addTextDisplayComponents(t => t.setContent(commandList));
+                }
+
+                const footerRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(isPrefix ? "list_prefix" : "list_slash").setLabel("Voltar").setEmoji("⬅️").setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId("go_home").setLabel("Sair").setStyle(ButtonStyle.Danger)
+                );
+
+                await i.update({ components: [cmdContainer, footerRow] });
+            }
+
+            if (i.customId === "go_home") {
+                await i.update({ components: [createHome()] });
+            }
+        });
+
+        collector.on("end", () => {
+            msg.edit({ components: [] }).catch(() => {});
         });
     }
 };
