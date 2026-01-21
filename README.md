@@ -61,51 +61,6 @@ O projeto Wardizitto é construído sobre uma base tecnológica sólida:
 *   **VirusTotal API**: Para garantir a segurança, verificando arquivos e links suspeitos 🛡️.
 *   **Outras bibliotecas**: `@discordjs/builders`, `@discordjs/rest`, `@discordjs/voice`, `axios`, `canvas`, `jimp`, `moment`, `ms`, `mysql2`, `qrcode`, `uuid`, `ytdl-core`, entre outras, para funcionalidades específicas e otimização.
 
-## ⚙️ Instalação e Configuração
-
-Para colocar o Wardizitto em funcionamento no seu servidor, siga estes passos:
-
-1.  **Clone o repositório:**
-    ```bash
-    git clone https://github.com/THZIMX/Wardizitto.git
-    cd Wardizitto
-    ```
-
-2.  **Instale as dependências:**
-    ```bash
-    npm install
-    ```
-
-3.  **Configure o `config.json`:**
-    Crie um arquivo `config.json` na raiz do projeto com as seguintes informações. **Lembre-se de manter suas chaves e tokens seguros!**
-    ```json
-    {
-      "token": "SEU_TOKEN_DO_BOT",
-      "clientId": "SEU_CLIENT_ID_DO_BOT",
-      "canal_bugs": "ID_DO_CANAL_DE_BUGS",
-      "canal_fanarts_revisao": "ID_DO_CANAL_DE_FANARTS_EM_REVISAO",
-      "Mysql": {
-        "host": "SEU_HOST_MYSQL",
-        "user": "SEU_USUARIO_MYSQL",
-        "password": "SUA_SENHA_MYSQL",
-        "database": "SEU_BANCO_DE_DADOS_MYSQL"
-      },
-      "webhookLogs": {
-        "url": "URL_DO_WEBHOOK_DE_LOGS"
-      },
-      "groqApiKey": "SUA_API_KEY_GROQ",
-      "virustotal_api_key": "SUA_API_KEY_VIRUSTOTAL"
-    }
-    ```
-    *   Substitua `SEU_TOKEN_DO_BOT` e `SEU_CLIENT_ID_DO_BOT` pelas credenciais obtidas no [Portal do Desenvolvedor Discord](https://discord.com/developers/applications).
-    *   Preencha as informações do `mariaDB` com os detalhes do seu servidor de banco de dados **MySQL**.
-    *   Configure `canal_bugs`, `canal_fanarts_revisao` e `webhookLogs.url` com os IDs de canais e URL de webhook do seu servidor para logs e funcionalidades específicas.
-    *   Obtenha as chaves de API para `groqApiKey` (Groq) e `virustotal_api_key` (VirusTotal) se for utilizar essas funcionalidades avançadas.
-
-4.  **Execute o bot:**
-    ```bash
-    node index.js
-    ```
 
 ## 📂 Estrutura do Projeto
 
