@@ -58,6 +58,11 @@ async function initMySQL(pool) {
         ultima_trabalhar DATETIME DEFAULT NULL,
         xp INT DEFAULT 0,
         level INT DEFAULT 1,
+        apostas_count INT DEFAULT 0,
+        ultima_aposta_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        jkp_bot_count INT DEFAULT 0,
+        jkp_player_count INT DEFAULT 0,
+        ultima_jkp_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         sobre_mim VARCHAR(255) DEFAULT 'Use /sobre para mudar isso!'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
