@@ -79,7 +79,9 @@ module.exports = {
           'select_ticket_role': TicketHandler,
           'buy_item_select': EconomyHandler,
           'deposit_all': EconomyHandler,
-          'withdraw_all': EconomyHandler
+          'withdraw_all': EconomyHandler,
+          'atm_manage': EconomyHandler,
+          'modal_atm': EconomyHandler
         };
 
         // Handlers dinâmicos (prefixos)
