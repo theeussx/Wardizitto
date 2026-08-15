@@ -1,0 +1,7 @@
+dist
+coverage
+logs
+node_modules
+package-lock.json
+src/core/config/emojis.json
+Wardizitto.png

@@ -1,77 +1,145 @@
-# ✨ Wardizitto - Seu Bot Discord Multifuncional ✨
+# Wardizitto v2
 
 <div align="center">
-  <img src="Wardizitto.png" alt="Wardizitto Logo" width="500">
-
+  <img src="Wardizitto.png" alt="Wardizitto" width="420">
+  <p><strong>Bot Discord modular para administração, economia, moderação e comunidades.</strong></p>
   <p>
-   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL%20v3-blue.svg"></a>
-    <img alt="Node.js" src="https://img.shields.io/badge/Node.js-v18%2B-green">
-    <img alt="Discord.js" src="https://img.shields.io/badge/Discord.js-v14-7289DA">
-    <img alt="Database" src="https://img.shields.io/badge/Database-MySQL-orange">
-    <img alt="Status" src="https://img.shields.io/badge/Status-Active-success">
+    <img alt="Node.js 22" src="https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white">
+    <img alt="Discord.js 14" src="https://img.shields.io/badge/Discord.js-14-5865F2?logo=discord&logoColor=white">
+    <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white">
+    <img alt="License AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue">
   </p>
-
-  <p><strong>Um bot Discord versátil e robusto, desenvolvido para enriquecer a experiência da sua comunidade com funcionalidades de moderação, economia, social e utilidades.</strong></p>
-
-  <a href="#-descrição">Descrição</a> •
-  <a href="#-funcionalidades-principais">Funcionalidades</a> •
-  <a href="#-tecnologias-utilizadas">Tecnologias</a> •
-  <a href="#-instalação-e-configuração">Instalação</a> •
-  <a href="#-estrutura-do-projeto">Estrutura</a> •
-  <a href="#-contribuição">Contribuição</a> •
-  <a href="#-licença">Licença</a>
 </div>
 
----
+## Visão geral
 
-## 🚀 Descrição
+A versão 2 reconstrói o runtime do Wardizitto sobre uma composição explícita, TypeScript estrito, módulos funcionais e fronteiras inspiradas em Clean Architecture. Configuração, banco, logs, permissões, rate limiting, tratamento de erros e roteamento do Discord são serviços centralizados e testáveis.
 
-**Wardizitto** é um bot Discord robusto e versátil, projetado para elevar a experiência da sua comunidade! 🤖 Desenvolvido em **Node.js** com a poderosa biblioteca `discord.js`, ele oferece uma vasta gama de comandos e funcionalidades que abrangem desde a moderação essencial até sistemas de economia complexos e interações sociais divertidas. Tudo isso é impulsionado por um eficiente banco de dados **MySQL** para garantir a persistência e segurança dos seus dados.
+O projeto contém somente o bot Discord. Não há API HTTP ou dashboard web nesta versão; camadas vazias não foram criadas apenas para aparentar complexidade.
 
-## 🌟 Funcionalidades Principais
+## Funcionalidades
 
-O Wardizitto está repleto de recursos, organizados em categorias intuitivas para facilitar a gestão e a diversão no seu servidor:
+- comandos slash e comandos legados por prefixo, carregados por registry validado;
+- moderação com hierarquia, advertências, timeout, expulsão e banimento;
+- tickets configuráveis com garantia de apenas um ticket aberto por usuário;
+- economia com operações financeiras atômicas e histórico transacional;
+- casamento isolado por servidor e protegido contra vínculos concorrentes;
+- verificação, AFK, utilidades, jogos, fanarts e relatórios de bugs;
+- integrações opcionais com Groq e VirusTotal;
+- cooldown por comando e rate limit global por usuário;
+- logs estruturados, coloridos, separados por categoria e rotacionados diariamente;
+- migrations versionadas com lock distribuído e verificação de checksum;
+- encerramento gracioso e tratamento global de falhas.
 
-### 🛡️ 1. Administração
-Comandos essenciais para a gestão do servidor, incluindo a criação de sistemas de tickets 🎫, sorteios 🎉 e painéis de controle administrativos.
+## Requisitos
 
-### 🎮 2. Diversão
-Traga mais entretenimento para seus membros com jogos como Jogo da Velha ❌⭕, adivinhação 🧠, dados 🎲, memes engraçados 😂 e contagens regressivas ⏳.
+- Node.js **22.22.1 ou superior**;
+- npm 10 ou superior;
+- MySQL 8.0+;
+- aplicação Discord com os intents habilitados conforme a configuração.
 
-### 💰 3. Economia
-Um sistema de economia completo! Os usuários podem ter perfis 📊, realizar transferências 💸, depósitos 🏦, saques e até escolher profissões 👷 para ganhar dinheiro no servidor.
+## Instalação
 
-### 🔨 4. Moderação
-Ferramentas poderosas para manter seu servidor seguro e organizado. Inclui adição de emojis personalizados ✨, limpeza de mensagens 🧹, gerenciamento de usuários (ban 🚫, unban ✅, lock/unlock canais 🔒🔓), avisos ⚠️ e comunicados importantes 📢.
-
-### ❤️ 5. Social
-Incentive a interação entre os membros com comandos sociais como abraços 🤗, beijos 😘, casamentos 💍, shippar casais 💖 e compartilhamento de fanarts 🎨.
-
-### 🛠️ 6. Utilidades
-Um conjunto de ferramentas úteis para o dia a dia, como informações detalhadas do bot ℹ️, dados de usuário 👤 e servidor 🖥️, calculadora ➕➖, verificação de ping 📡, status AFK 🌙, e integrações com APIs como VirusTotal 🦠 e GitHub 🐙.
-
-## 💻 Tecnologias Utilizadas
-
-O projeto Wardizitto é construído sobre uma base tecnológica sólida:
-
-*   **Node.js**: O ambiente de execução JavaScript que alimenta o bot.
-*   **discord.js**: A biblioteca oficial e mais popular para interagir com a API do Discord.
-*   **MySQL**: Um sistema de gerenciamento de banco de dados relacional de alta performance para todas as informações do bot.
-*   **Groq SDK**: Utilizado para funcionalidades avançadas de IA e processamento de linguagem natural 🧠.
-*   **VirusTotal API**: Para garantir a segurança, verificando arquivos e links suspeitos 🛡️.
-*   **Outras bibliotecas**: `@discordjs/builders`, `@discordjs/rest`, `@discordjs/voice`, `axios`, `canvas`, `jimp`, `moment`, `ms`, `mysql2`, `qrcode`, `uuid`, `ytdl-core`, entre outras, para funcionalidades específicas e otimização.
-
-
-## 📂 Estrutura do Projeto
-
+```bash
+git clone https://github.com/theeussx/Wardizitto.git
+cd Wardizitto
+nvm use
+npm ci
+cp .env.example .env
 ```
-ESTA EM UM NOVO DESENVOLVIMENTO, AGUARDE A ATUALIZACAO.
+
+Preencha ao menos `DISCORD_TOKEN`, `DISCORD_OWNER_IDS`, `DISCORD_GUILD_ID` e as variáveis `DB_*`. Nunca versione `.env`.
+
+```bash
+npm run db:migrate
+npm run dev
 ```
-## 🤝 Contribuição
 
-Contribuições são sempre bem-vindas! ✨ Sinta-se à vontade para abrir [issues](https://github.com/THZIMX/Wardizitto/issues) para relatar bugs ou sugerir melhorias, e [pull requests](https://github.com/THZIMX/Wardizitto/pulls) para adicionar novas funcionalidades ou corrigir problemas. Juntos, podemos tornar o Wardizitto ainda melhor! 😊
+Para produção:
 
-## 📄 Licença
+```bash
+npm run validate
+npm run start:prod
+```
 
-Este projeto está licenciado sob a licença **AGPL v3**. Para mais detalhes, consulte o arquivo `LICENSE` na raiz do repositório. ⚖️
+### Docker
 
+```bash
+cp .env.example .env
+# configure também MYSQL_ROOT_PASSWORD no ambiente
+
+docker compose up --build -d
+```
+
+O processo executa migrations na inicialização quando `DB_MIGRATE_ON_START=true`.
+
+## Configuração
+
+Todas as variáveis e defaults estão documentados em [`.env.example`](.env.example). Destaques:
+
+| Variável                              | Finalidade                                               |
+| ------------------------------------- | -------------------------------------------------------- |
+| `DISCORD_OWNER_IDS`                   | Lista de owners separada por vírgula                     |
+| `DISCORD_GLOBAL_COMMANDS`             | Registra globalmente; em desenvolvimento prefira `false` |
+| `DISCORD_GUILD_ID`                    | Guild usada no registro local                            |
+| `DB_MIGRATE_ON_START`                 | Aplica migrations pendentes antes do login               |
+| `LOG_LEVEL` / `LOG_RETENTION_DAYS`    | Verbosidade e retenção dos logs                          |
+| `COMMAND_COOLDOWN_MS`                 | Cooldown padrão por comando/usuário                      |
+| `RATE_LIMIT_*`                        | Proteção global contra abuso                             |
+| `HTTP_*`                              | Timeout e limite de respostas externas                   |
+| `GROQ_API_KEY` / `VIRUSTOTAL_API_KEY` | Integrações opcionais                                    |
+
+A aplicação falha cedo com uma lista clara de campos inválidos. Secrets nunca são incluídos nos logs.
+
+## Scripts
+
+| Comando                  | Ação                                             |
+| ------------------------ | ------------------------------------------------ |
+| `npm run dev`            | Executa em desenvolvimento com reload            |
+| `npm run build`          | Compila TypeScript e copia assets versionados    |
+| `npm start`              | Executa o build de produção                      |
+| `npm run db:migrate`     | Aplica migrations pendentes                      |
+| `npm run check:commands` | Valida contratos, nomes e duplicatas de comandos |
+| `npm run lint`           | Executa ESLint                                   |
+| `npm run format:check`   | Valida Prettier                                  |
+| `npm run typecheck`      | Valida tipos sem gerar build                     |
+| `npm test`               | Executa testes                                   |
+| `npm run test:coverage`  | Testes com limites mínimos de cobertura          |
+| `npm run validate`       | Executa todos os quality gates                   |
+
+## Estrutura
+
+```text
+src/
+├── application/              # casos de uso, portas e serviços de aplicação
+├── core/                     # configuração, erros, localização e segurança
+├── infrastructure/           # MySQL, migrations, cache, HTTP, logs e integrações
+├── modules/                  # módulos funcionais independentes
+│   ├── economy/
+│   ├── moderation/
+│   ├── social/
+│   ├── tickets/
+│   └── ...
+├── presentation/discord/     # client, routers, registries e lifecycle
+└── main.ts                   # composition root
+```
+
+O fluxo é `Discord → router → middleware → serviço de aplicação → porta → infraestrutura`. Regras de negócio não devem depender de builders ou interações do Discord.
+
+Leia:
+
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Banco de dados](docs/DATABASE.md)
+- [Migração da v1](docs/MIGRATION_V2.md)
+- [Segurança](SECURITY.md)
+- [Contribuição](CONTRIBUTING.md)
+
+## Qualidade e CI/CD
+
+Os quality gates estão disponíveis por `npm run validate`. Templates de CI, migrations em MySQL e publicação no GHCR ficam em `docs/workflows/`; copie-os para `.github/workflows/` quando a integração GitHub tiver permissão de Workflows/Actions.
+
+Commits seguem [Conventional Commits](https://www.conventionalcommits.org/) e são validados por Commitlint. Husky e lint-staged verificam arquivos alterados antes do commit.
+
+## Licença
+
+Wardizitto é distribuído sob [AGPL-3.0-only](LICENSE).
