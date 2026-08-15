@@ -1,6 +1,7 @@
 const { isOwner } = require('../../../../../core/security/owner.js');
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -37,19 +38,19 @@ module.exports = {
             1024
           ).toFixed(2)} MB · ~${Number(table.estimatedRows || 0).toLocaleString('pt-BR')} linhas`,
       );
+
+    const label = new LabelBuilder()
+      .setColor(Colors.Teal)
+      .setTitle('Armazenamento do banco')
+      .setDescription(
+        `**Banco:** \`${databaseName}\`\n**Total:** ${(totalBytes / 1024 / 1024).toFixed(2)} MB\n\n${lines.join('\n') || 'Nenhuma tabela.'}`,
+      )
+      .setFooter(`Exibindo ${Math.min(tables.length, 20)} de ${tables.length} tabelas`)
+      .setTimestamp();
+
     return interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#1abc9c')
-          .setTitle('Armazenamento do banco')
-          .setDescription(
-            `**Banco:** \`${databaseName}\`\n**Total:** ${(totalBytes / 1024 / 1024).toFixed(2)} MB\n\n${lines.join('\n') || 'Nenhuma tabela.'}`,
-          )
-          .setFooter({
-            text: `Exibindo ${Math.min(tables.length, 20)} de ${tables.length} tabelas`,
-          })
-          .setTimestamp(),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

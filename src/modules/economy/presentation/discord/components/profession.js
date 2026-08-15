@@ -1,6 +1,12 @@
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { AttachmentBuilder, MessageFlags } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../../../../../infrastructure/database/legacy.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+  emojiURL,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   name: 'interactionCreate',
@@ -10,15 +16,6 @@ module.exports = {
 
     const userId = interaction.user.id;
     const selectedProfession = interaction.values[0];
-
-    // Emojis personalizados
-    const emojis = {
-      tools: '<:icons_tools:1353597168912437341>',
-      correct: '<a:correct:1353898613494779974>',
-      wrong: '<:icons_wrong:1353597190920212573>',
-      star: '<:icons_star:1353597390673936448>',
-      logo: '<a:icons_logo:1353597304170483795>',
-    };
 
     try {
       // Atualizar ou inserir a profissão no banco
@@ -69,49 +66,38 @@ module.exports = {
         name: 'profissao-selected.png',
       });
 
-      // Embed de sucesso
-      const embed = new EmbedBuilder()
-        .setTitle(`${emojis.tools} Profissão Escolhida`)
+      // Rótulo de sucesso
+      const label = new LabelBuilder()
+        .setTitle(`${emoji('eg_tools')} Profissão Escolhida`)
         .setDescription(
-          `${emojis.correct} Você escolheu **${selectedProfession}**! Use **/trabalhar** para ganhar Wardcoins!`,
+          `${emoji('correct', true)} Você escolheu **${selectedProfession}**! Use **/trabalhar** para ganhar Wardcoins!`,
         )
         .setColor('#00BFFF')
-        .addFields({
-          name: `${emojis.star} Próximo Passo`,
-          value: 'Experimente o comando `/trabalhar`!',
-          inline: false,
-        })
+        .addField(`${emoji('icons_star')} Próximo Passo`, 'Experimente o comando `/trabalhar`!')
         .setImage('attachment://profissao-selected.png')
-        .setFooter({
-          text: 'Sistema de economia Wardcoins',
-          iconURL: `https://cdn.discordapp.com/emojis/${emojis.logo.split(':')[2].replace('>', '')}.gif`,
-        })
+        .setFooter('Sistema de economia Wardcoins', emojiURL('icons_logo', true))
         .setTimestamp();
 
       await interaction.update({
         content: null,
-        embeds: [embed],
-        components: [],
+        components: [label.build()],
         files: [attachment],
-        ephemeral: true, // Corrigido aqui
+        flags: MessageFlags.IsComponentsV2,
       });
     } catch (err) {
       interaction.client.services.logger.error('Erro ao processar seleção de profissão:', err);
 
-      const embedErro = new EmbedBuilder()
-        .setTitle(`${emojis.wrong} Erro`)
+      const errorLabel = new LabelBuilder()
+        .setTitle(`${emoji('icons_wrong')} Erro`)
         .setDescription('Ocorreu um erro ao salvar sua profissão. Tente novamente mais tarde.')
-        .setColor('#FF0000')
-        .setFooter({
-          text: 'Sistema de economia Wardcoins',
-          iconURL: `https://cdn.discordapp.com/emojis/${emojis.logo.split(':')[2].replace('>', '')}.gif`,
-        })
+        .setColor(Colors.Red)
+        .setFooter('Sistema de economia Wardcoins', emojiURL('icons_logo', true))
         .setTimestamp();
 
       await interaction.update({
         content: null,
-        embeds: [embedErro],
-        ephemeral: true, // Corrigido aqui também
+        components: [errorLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
       });
     }
   },

@@ -1,13 +1,10 @@
-const {
-  ActionRowBuilder,
-  EmbedBuilder,
-  MessageFlags,
-  ModalBuilder,
-  PermissionFlagsBits,
-  TextInputBuilder,
-  TextInputStyle,
-} = require('discord.js');
+const { MessageFlags, PermissionFlagsBits, TextInputStyle } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const {
+  LabelBuilder,
+  Colors,
+  createModal,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 const ephemeral = (content) => ({ content, flags: MessageFlags.Ephemeral });
 const canModerate = (interaction) =>
@@ -73,14 +70,13 @@ module.exports = {
               )
               .join('\n')
           : 'Nenhuma advertência registrada.';
+        const label = new LabelBuilder()
+          .setTitle(`Advertências de ${target.user.tag}`)
+          .setDescription(description)
+          .setColor(Colors.Orange);
         return interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle(`Advertências de ${target.user.tag}`)
-              .setDescription(description)
-              .setColor('Orange'),
-          ],
-          flags: MessageFlags.Ephemeral,
+          components: [label.build()],
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
         });
       }
       if (action === 'clearwarns') {
@@ -96,9 +92,27 @@ module.exports = {
         );
       }
 
-      const modal = new ModalBuilder()
-        .setCustomId(`adminAction_modal_${action}_${userId}`)
-        .setTitle(
+      const fields = [];
+      if (action === 'timeout') {
+        fields.push({
+          customId: 'duration',
+          label: 'Duração: 10m, 2h ou 7d (máximo 28d)',
+          style: TextInputStyle.Short,
+          maxLength: 10,
+          required: true,
+        });
+      }
+      fields.push({
+        customId: 'reason',
+        label: 'Motivo',
+        style: TextInputStyle.Paragraph,
+        maxLength: 512,
+        required: true,
+      });
+
+      const modal = createModal({
+        customId: `adminAction_modal_${action}_${userId}`,
+        title:
           action === 'warn'
             ? 'Registrar advertência'
             : action === 'timeout'
@@ -106,29 +120,8 @@ module.exports = {
               : action === 'kick'
                 ? 'Expulsar membro'
                 : 'Banir membro',
-        );
-      if (action === 'timeout') {
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId('duration')
-              .setLabel('Duração: 10m, 2h ou 7d (máximo 28d)')
-              .setStyle(TextInputStyle.Short)
-              .setMaxLength(10)
-              .setRequired(true),
-          ),
-        );
-      }
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('reason')
-            .setLabel('Motivo')
-            .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(512)
-            .setRequired(true),
-        ),
-      );
+        fields,
+      });
       return interaction.showModal(modal);
     }
 

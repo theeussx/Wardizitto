@@ -1,5 +1,10 @@
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const { createCanvas, loadImage, registerFont } = require('@napi-rs/canvas');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,23 +34,23 @@ module.exports = {
       user2.username.slice(user2.username.length / 2);
 
     // Emojis por afinidade
-    let emoji = '';
+    let emojiIcon = '';
     let frase = '';
 
     if (love >= 90) {
-      emoji = '<:eg_heart:1353597127091294208>';
-      frase = '💍 Casamento confirmado! se quiser use </casar\> e escolha o seu ship.';
+      emojiIcon = emoji('eg_heart');
+      frase = '💍 Casamento confirmado! se quiser use </casar\\> e escolha o seu ship.';
     } else if (love >= 70) {
-      emoji = '<a:estrela:1353898619731968050>';
-      frase = '✨ Um casal brilhante! da pra ir um casamento hein <:eg_fire:1353597119436685354>';
+      emojiIcon = emoji('estrela', true);
+      frase = `✨ Um casal brilhante! da pra ir um casamento hein ${emoji('eg_fire')}`;
     } else if (love >= 50) {
-      emoji = '<:eg_fire:1353597119436685354>';
+      emojiIcon = emoji('eg_fire');
       frase = '🔥 Tem química, hein!';
     } else if (love >= 30) {
-      emoji = '<:eg_netual:1353597145646759986>';
+      emojiIcon = emoji('eg_netual');
       frase = '🤔 Melhor só amizade mesmo...';
     } else {
-      emoji = '<:icons_wrong:1353597190920212573>';
+      emojiIcon = emoji('icons_wrong');
       frase = '💔 Sai que é cilada!';
     }
 
@@ -96,20 +101,21 @@ module.exports = {
       const buffer = canvas.toBuffer('image/png');
       const attachment = new AttachmentBuilder(buffer, { name: 'ship.png' });
 
-      // Embed
-      const embed = new EmbedBuilder()
-        .setColor(0xff69b4)
+      // Rótulo
+      const label = new LabelBuilder()
+        .setColor(Colors.Pink)
         .setTitle('💘 Resultado do Ship')
         .setDescription(
-          `${emoji} ${user1} + ${user2} = **${shipName}**\n\n❤️ Afinidade: **${love}%**\n${frase}`,
+          `${emojiIcon} ${user1} + ${user2} = **${shipName}**\n\n❤️ Afinidade: **${love}%**\n${frase}`,
         )
         .setImage('attachment://ship.png')
-        .setFooter({
-          text: `Comando usado por ${interaction.user.username}`,
-          iconURL: interaction.user.displayAvatarURL(),
-        });
+        .setFooter(`Comando usado por ${interaction.user.username}`);
 
-      await interaction.reply({ embeds: [embed], files: [attachment] });
+      await interaction.reply({
+        components: [label.build()],
+        files: [attachment],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (err) {
       interaction.client.services.logger.error('Erro ao gerar imagem do ship:', err);
       return interaction.reply({

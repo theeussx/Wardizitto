@@ -1,6 +1,7 @@
-import { EmbedBuilder, type Message } from 'discord.js';
+import { MessageFlags, type Message } from 'discord.js';
 
 import type { WardizittoClient } from '../client/wardizitto-client.js';
+import { LabelBuilder, Colors } from '../ui/components-v2.js';
 import { PrefixCommandHandler } from './prefix-command-handler.js';
 
 export class MessageRouter {
@@ -50,14 +51,14 @@ export class MessageRouter {
       .slice(0, 10)
       .map((status) => `<@${status.userId}> está AFK: ${status.message.slice(0, 300)}`)
       .join('\n');
+    const label = new LabelBuilder()
+      .setColor('#e74c3c')
+      .setTitle('Usuário AFK')
+      .setDescription(description);
     await message
       .reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('#e74c3c')
-            .setTitle('Usuário AFK')
-            .setDescription(description),
-        ],
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
         allowedMentions: { repliedUser: false },
       })
       .catch(() => undefined);
@@ -70,16 +71,16 @@ export class MessageRouter {
     if (content !== `<@${userId}>` && content !== `<@!${userId}>`) return;
 
     this.client.services.rateLimiter.consume(`${message.guildId}:${message.author.id}:mention`);
+    const label = new LabelBuilder()
+      .setColor(Colors.Blurple)
+      .setTitle(`Olá, ${message.author.username}!`)
+      .setDescription(
+        `Meu prefixo é \`${this.client.services.config.DISCORD_PREFIX}\`. Use os comandos de barra para conhecer meus recursos.`,
+      )
+      .setTimestamp();
     await message.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#5865f2')
-          .setTitle(`Olá, ${message.author.username}!`)
-          .setDescription(
-            `Meu prefixo é \`${this.client.services.config.DISCORD_PREFIX}\`. Use os comandos de barra para conhecer meus recursos.`,
-          )
-          .setTimestamp(),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
       allowedMentions: { repliedUser: false },
     });
   }

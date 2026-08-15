@@ -1,6 +1,5 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   MessageFlags,
@@ -8,6 +7,12 @@ const {
 } = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const db = require('../../../../../infrastructure/database/legacy.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+  emojiURL,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,18 +22,9 @@ module.exports = {
   async execute(interaction) {
     const userId = interaction.user.id;
 
-    // Emojis personalizados
-    const emojis = {
-      tools: '<:icons_tools:1353597168912437341>',
-      wrong: '<:icons_wrong:1353597190920212573>',
-      loading: '<a:loading:1353898628149940326>',
-      star: '<:icons_star:1353597390673936448>',
-      logo: '<a:icons_logo:1353597304170483795>',
-    };
-
     // Mensagem de loading (efêmera)
     await interaction.reply({
-      content: `${emojis.loading} Carregando menu de profissões...`,
+      content: `${emoji('loading', true)} Carregando menu de profissões...`,
       flags: MessageFlags.Ephemeral,
     });
 
@@ -83,51 +79,43 @@ module.exports = {
           ]),
       );
 
-      // Criar embed
-      const embed = new EmbedBuilder()
-        .setTitle(`${emojis.tools} Escolher Profissão`)
+      // Criar rótulo
+      const label = new LabelBuilder()
+        .setTitle(`${emoji('eg_tools')} Escolher Profissão`)
         .setDescription('Selecione uma profissão para começar a ganhar Wardcoins!')
         .setColor('#00BFFF')
-        .addFields({
-          name: `${emojis.star} Instruções`,
-          value: 'Use o menu abaixo para escolher sua profissão.',
-          inline: false,
-        })
+        .addField(
+          `${emoji('icons_star')} Instruções`,
+          'Use o menu abaixo para escolher sua profissão.',
+        )
         .setImage('attachment://profissao-banner.png')
-        .setFooter({
-          text: 'Sistema de economia Wardcoins',
-          iconURL: `https://cdn.discordapp.com/emojis/${emojis.logo.split(':')[2].replace('>', '')}.gif`,
-        })
+        .setFooter('Sistema de economia Wardcoins', emojiURL('icons_logo', true))
         .setTimestamp();
 
       await interaction.editReply({
         content: null,
-        embeds: [embed],
-        components: [row],
+        components: [label.build(), row],
         files: [attachment],
-        flags: MessageFlags.Ephemeral,
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     } catch (err) {
       interaction.client.services.logger.error(
         'Erro ao executar o comando /escolher-profissao:',
         err,
       );
-      const embedErro = new EmbedBuilder()
-        .setTitle(`${emojis.wrong} Erro`)
+      const errorLabel = new LabelBuilder()
+        .setTitle(`${emoji('icons_wrong')} Erro`)
         .setDescription(
           'Ocorreu um erro ao carregar o menu de profissões. Tente novamente mais tarde.',
         )
-        .setColor('#FF0000')
-        .setFooter({
-          text: 'Sistema de economia Wardcoins',
-          iconURL: `https://cdn.discordapp.com/emojis/${emojis.logo.split(':')[2].replace('>', '')}.gif`,
-        })
+        .setColor(Colors.Red)
+        .setFooter('Sistema de economia Wardcoins', emojiURL('icons_logo', true))
         .setTimestamp();
 
       await interaction.editReply({
         content: null,
-        embeds: [embedErro],
-        flags: MessageFlags.Ephemeral,
+        components: [errorLabel.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     }
   },

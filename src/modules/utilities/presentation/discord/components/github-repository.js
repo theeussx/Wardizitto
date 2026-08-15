@@ -1,4 +1,5 @@
-const { EmbedBuilder, MessageFlags } = require('discord.js');
+const { MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   async execute(interaction) {
@@ -26,18 +27,19 @@ module.exports = {
     );
     if (!response.ok) throw new Error(`GitHub respondeu HTTP ${response.status}.`);
     const repository = await response.json();
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle(String(repository.full_name).slice(0, 256))
       .setURL(repository.html_url)
       .setDescription(String(repository.description || 'Sem descrição.').slice(0, 2000))
-      .addFields(
-        { name: 'Linguagem', value: String(repository.language || 'N/A'), inline: true },
-        { name: 'Estrelas', value: String(repository.stargazers_count), inline: true },
-        { name: 'Forks', value: String(repository.forks_count), inline: true },
-        { name: 'Issues abertas', value: String(repository.open_issues_count), inline: true },
-        { name: 'Licença', value: String(repository.license?.name || 'Nenhuma'), inline: true },
-      )
+      .addField('Linguagem', String(repository.language || 'N/A'), true)
+      .addField('Estrelas', String(repository.stargazers_count), true)
+      .addField('Forks', String(repository.forks_count), true)
+      .addField('Issues abertas', String(repository.open_issues_count), true)
+      .addField('Licença', String(repository.license?.name || 'Nenhuma'), true)
       .setColor(0x2f81f7);
-    await interaction.update({ embeds: [embed] });
+    await interaction.update({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

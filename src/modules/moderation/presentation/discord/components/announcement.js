@@ -1,15 +1,45 @@
 const {
   Events,
-  EmbedBuilder,
-  ModalBuilder,
-  TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
   ChannelSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionsBitField,
+  MessageFlags,
 } = require('discord.js');
+const {
+  LabelBuilder,
+  Colors,
+  createModal,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
+
+// Extrai título, descrição, cor e mídia de um container V2 serializado.
+const parsePreview = (message) => {
+  const container = message?.components?.[0]?.toJSON?.() ?? message?.components?.[0];
+  const texts = [];
+  let color = '#5865F2';
+  let imageUrl = '';
+  let thumbUrl = '';
+  const walk = (node) => {
+    if (!node) return;
+    if (node.type === 10) texts.push(node.content);
+    if (node.accent_color !== undefined) {
+      color = `#${node.accent_color.toString(16).padStart(6, '0')}`;
+    }
+    if (node.type === 12 && node.items?.[0]?.media?.url) imageUrl = node.items[0].media.url;
+    if (node.accessory?.media?.url) thumbUrl = node.accessory.media.url;
+    for (const child of node.components || []) walk(child);
+    for (const item of node.items || []) walk(item);
+  };
+  walk(container);
+  const title = (texts.find((text) => text.startsWith('## ')) || '')
+    .replace(/^##\s*/u, '')
+    .replace('📢 ', '');
+  const description =
+    texts.find((text) => !text.startsWith('## ') && !text.startsWith('-# ')) || '';
+  return { title, description, color, imageUrl, thumbUrl };
+};
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -39,7 +69,7 @@ module.exports = {
           content: 'Comunicado cancelado com sucesso.',
           ephemeral: true,
         });
-      } catch (error) {
+      } catch {
         await interaction.reply({
           content: 'Ocorreu um erro ao cancelar o comunicado.',
           ephemeral: true,
@@ -50,57 +80,49 @@ module.exports = {
 
     // Editar comunicado - Abrir modal
     if (interaction.customId === 'editar_comunicado') {
-      const originalEmbed = interaction.message.embeds[0];
+      const preview = parsePreview(interaction.message);
 
-      const modal = new ModalBuilder()
-        .setCustomId('modal_editar_comunicado')
-        .setTitle('Editar Comunicado');
-
-      // Preencher campos com valores atuais
-      const tituloInput = new TextInputBuilder()
-        .setCustomId('titulo_comunicado')
-        .setLabel('Título')
-        .setStyle(TextInputStyle.Short)
-        .setValue(originalEmbed.title?.replace('📢 ', '') || '')
-        .setRequired(true);
-
-      const descInput = new TextInputBuilder()
-        .setCustomId('mensagem_comunicado')
-        .setLabel('Descrição')
-        .setStyle(TextInputStyle.Paragraph)
-        .setValue(originalEmbed.description || '')
-        .setRequired(true);
-
-      const corInput = new TextInputBuilder()
-        .setCustomId('cor_comunicado')
-        .setLabel('Cor (hex ou nome básico)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(
-          originalEmbed.color ? `#${originalEmbed.color.toString(16).padStart(6, '0')}` : '#5865F2',
-        )
-        .setRequired(false);
-
-      const imgInput = new TextInputBuilder()
-        .setCustomId('imagem_comunicado')
-        .setLabel('URL da imagem (opcional)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(originalEmbed.image?.url || '')
-        .setRequired(false);
-
-      const thumbInput = new TextInputBuilder()
-        .setCustomId('thumb_comunicado')
-        .setLabel('URL da thumbnail (opcional)')
-        .setStyle(TextInputStyle.Short)
-        .setValue(originalEmbed.thumbnail?.url || '')
-        .setRequired(false);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(tituloInput),
-        new ActionRowBuilder().addComponents(descInput),
-        new ActionRowBuilder().addComponents(corInput),
-        new ActionRowBuilder().addComponents(imgInput),
-        new ActionRowBuilder().addComponents(thumbInput),
-      );
+      const modal = createModal({
+        customId: 'modal_editar_comunicado',
+        title: 'Editar Comunicado',
+        fields: [
+          {
+            customId: 'titulo_comunicado',
+            label: 'Título',
+            style: TextInputStyle.Short,
+            value: preview.title || '',
+            required: true,
+          },
+          {
+            customId: 'mensagem_comunicado',
+            label: 'Descrição',
+            style: TextInputStyle.Paragraph,
+            value: preview.description || '',
+            required: true,
+          },
+          {
+            customId: 'cor_comunicado',
+            label: 'Cor (hex ou nome básico)',
+            style: TextInputStyle.Short,
+            value: preview.color || '#5865F2',
+            required: false,
+          },
+          {
+            customId: 'imagem_comunicado',
+            label: 'URL da imagem (opcional)',
+            style: TextInputStyle.Short,
+            value: preview.imageUrl || '',
+            required: false,
+          },
+          {
+            customId: 'thumb_comunicado',
+            label: 'URL da thumbnail (opcional)',
+            style: TextInputStyle.Short,
+            value: preview.thumbUrl || '',
+            required: false,
+          },
+        ],
+      });
 
       await interaction.showModal(modal);
       return;
@@ -117,22 +139,19 @@ module.exports = {
       // Padronizar cor
       cor = cor.startsWith('#') ? cor : `#${cor}`;
 
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setTitle(`📢 ${titulo}`)
         .setDescription(mensagem)
         .setColor(cor)
         .setTimestamp()
-        .setFooter({
-          text: `Enviado por ${interaction.user.tag}`,
-          iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-        });
+        .setFooter(`Enviado por ${interaction.user.tag}`);
 
       // Adicionar imagem e thumbnail se fornecidas e válidas
       const imagem = interaction.fields.getTextInputValue('imagem_comunicado');
       const thumb = interaction.fields.getTextInputValue('thumb_comunicado');
 
-      if (imagem && this.isValidURL(imagem)) embed.setImage(imagem);
-      if (thumb && this.isValidURL(thumb)) embed.setThumbnail(thumb);
+      if (imagem && this.isValidURL(imagem)) label.setImage(imagem);
+      if (thumb && this.isValidURL(thumb)) label.setThumbnail(thumb);
 
       // Recriar os botões de ação
       const row = new ActionRowBuilder().addComponents(
@@ -150,7 +169,10 @@ module.exports = {
           .setStyle(ButtonStyle.Danger),
       );
 
-      await interaction.editReply({ embeds: [embed], components: [row] });
+      await interaction.editReply({
+        components: [label.build(), row],
+        flags: MessageFlags.IsComponentsV2,
+      });
       return;
     }
 
@@ -178,19 +200,25 @@ module.exports = {
       const canalId = interaction.values[0];
 
       // Buscar a mensagem original que contém o comunicado
-      const originalMessage = await interaction.channel.messages.fetch(
-        interaction.message.reference?.messageId,
-      );
+      const originalMessage = await interaction.channel.messages
+        .fetch(interaction.message.reference?.messageId)
+        .catch(() => undefined);
 
-      if (!originalMessage || !originalMessage.embeds[0]) {
-        return await interaction.editReply({
+      const preview = parsePreview(originalMessage);
+      if (!originalMessage || !preview.description) {
+        return interaction.editReply({
           content: '❌ Não foi possível encontrar o comunicado para enviar.',
           components: [],
-          embeds: [],
         });
       }
 
-      const embed = EmbedBuilder.from(originalMessage.embeds[0]);
+      const label = new LabelBuilder()
+        .setTitle(`📢 ${preview.title || 'Comunicado'}`)
+        .setDescription(preview.description)
+        .setColor(preview.color)
+        .setTimestamp();
+      if (preview.imageUrl) label.setImage(preview.imageUrl);
+      if (preview.thumbUrl) label.setThumbnail(preview.thumbUrl);
 
       try {
         const canal = await interaction.guild.channels.fetch(canalId);
@@ -199,30 +227,31 @@ module.exports = {
         if (
           !canal.permissionsFor(interaction.client.user).has(PermissionsBitField.Flags.SendMessages)
         ) {
-          return await interaction.editReply({
+          return interaction.editReply({
             content: `❌ Não tenho permissão para enviar mensagens em ${canal.toString()}`,
             components: [],
-            embeds: [],
           });
         }
 
         // Enviar o comunicado
-        await canal.send({ embeds: [embed] });
+        await canal.send({
+          components: [label.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
 
         // Atualizar a mensagem de seleção
         await interaction.editReply({
           content: `✅ Comunicado enviado com sucesso para ${canal.toString()}!`,
           components: [],
-          embeds: [],
         });
 
         // Deletar a mensagem original com os botões
         await originalMessage.delete().catch(() => {});
       } catch (error) {
+        interaction.client.services.logger.error('Erro ao enviar comunicado.', error);
         await interaction.editReply({
           content: '❌ Ocorreu um erro ao enviar o comunicado.',
           components: [],
-          embeds: [],
         });
       }
     }

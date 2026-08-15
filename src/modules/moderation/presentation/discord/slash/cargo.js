@@ -1,4 +1,9 @@
-const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,90 +20,89 @@ module.exports = {
     const role = interaction.options.getRole('cargo');
     const targetMember = interaction.guild.members.cache.get(user.id);
 
+    const ephemeral = (label) =>
+      interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          '<:eg_cross:1353597108640415754> Você precisa da permissão `Gerenciar Cargos` para usar este comando.',
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return ephemeral(
+        new LabelBuilder()
+          .setColor(Colors.Red)
+          .setDescription(
+            `${emoji('eg_cross')} Você precisa da permissão \`Gerenciar Cargos\` para usar este comando.`,
+          ),
+      );
     }
 
     if (!targetMember) {
-      return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription('<:eg_cross:1353597108640415754> Membro não encontrado.'),
-        ],
-        ephemeral: true,
-      });
+      return ephemeral(
+        new LabelBuilder()
+          .setColor(Colors.Red)
+          .setDescription(`${emoji('eg_cross')} Membro não encontrado.`),
+      );
     }
 
     if (targetMember.roles.cache.has(role.id)) {
-      return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Yellow')
-            .setDescription(
-              `<:eg_excl:1353597115196244031> O usuário já possui o cargo \`${role.name}\`.`,
-            ),
-        ],
-        ephemeral: true,
-      });
+      return ephemeral(
+        new LabelBuilder()
+          .setColor('Yellow')
+          .setDescription(`${emoji('eg_excl')} O usuário já possui o cargo \`${role.name}\`.`),
+      );
     }
 
     if (role.position >= interaction.guild.members.me.roles.highest.position) {
-      return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription(
-              '<:eg_cross:1353597108640415754> Não consigo atribuir esse cargo, pois está acima do meu na hierarquia.',
-            ),
-        ],
-        ephemeral: true,
-      });
+      return ephemeral(
+        new LabelBuilder()
+          .setColor(Colors.Red)
+          .setDescription(
+            `${emoji('eg_cross')} Não consigo atribuir esse cargo, pois está acima do meu na hierarquia.`,
+          ),
+      );
     }
 
     if (
       targetMember.roles.highest.position >= interaction.guild.members.me.roles.highest.position
     ) {
-      return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription(
-              '<:eg_cross:1353597108640415754> Não posso modificar os cargos deste membro devido à hierarquia.',
-            ),
-        ],
-        ephemeral: true,
-      });
+      return ephemeral(
+        new LabelBuilder()
+          .setColor(Colors.Red)
+          .setDescription(
+            `${emoji('eg_cross')} Não posso modificar os cargos deste membro devido à hierarquia.`,
+          ),
+      );
     }
 
     try {
       await targetMember.roles.add(role);
 
-      const successEmbed = new EmbedBuilder()
-        .setColor('Green')
+      const successLabel = new LabelBuilder()
+        .setColor(Colors.Green)
         .setDescription(
-          `<:icons_correct:1353597185542979664> O cargo \`${role.name}\` foi atribuído a **${user.tag}** com sucesso!`,
+          `${emoji('icons_correct')} O cargo \`${role.name}\` foi atribuído a **${user.tag}** com sucesso!`,
         );
 
-      await interaction.reply({ embeds: [successEmbed] });
+      await interaction.reply({
+        components: [successLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (err) {
       interaction.client.services.logger.error('Erro ao adicionar o cargo:', err);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor('Red')
-        .setTitle('<:eg_cross:1353597108640415754> Erro ao adicionar cargo')
+      const errorLabel = new LabelBuilder()
+        .setColor(Colors.Red)
+        .setTitle(`${emoji('eg_cross')} Erro ao adicionar cargo`)
         .setDescription(
           err.message.includes('Missing Permissions')
             ? 'Permissões insuficientes. Verifique se o cargo do bot está configurado corretamente.'
             : 'Ocorreu um erro inesperado. Tente novamente mais tarde.',
         );
 
-      return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      return interaction.reply({
+        components: [errorLabel.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
     }
   },
 };

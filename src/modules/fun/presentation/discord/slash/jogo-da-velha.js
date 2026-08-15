@@ -3,8 +3,9 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
+  MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -53,7 +54,8 @@ module.exports = {
       lastGameResult = '',
       lastMove = null,
       moveHistory = [],
-      message = null;
+      message = null,
+      gameEnded = false;
     const symbols = { [player1.id]: '❌', [player2.id]: '⭕' };
 
     board = [
@@ -153,20 +155,20 @@ module.exports = {
         .join('\n');
     }
 
-    function updateEmbed() {
+    function updateLabel() {
       const opponentName = player2.id === 'bot' ? 'Bot' : player2.username;
       let description = `🔹 **${player1.username}** (X) vs **${opponentName}** (O)\n🎲 Turno de: ${currentPlayer.id === 'bot' ? 'Bot' : currentPlayer.username}`;
       if (lastGameResult) {
         description += `\n\nResultado da partida anterior: **${lastGameResult}**\n${formatLastMove()}`;
       }
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setTitle('🎮 Jogo da Velha')
         .setDescription(description)
-        .setColor(0x5865f2);
+        .setColor(Colors.Blurple);
       if (lastGameResult) {
-        embed.addFields({ name: 'Tabuleiro Final', value: formatBoard() });
+        label.addField('Tabuleiro Final', formatBoard());
       }
-      return embed;
+      return label;
     }
 
     function createBoard() {
@@ -309,7 +311,10 @@ module.exports = {
       currentPlayer = player1;
       lastMove = null;
       moveHistory = [];
-      await interaction.editReply({ embeds: [updateEmbed()], components: createBoard() });
+      await interaction.editReply({
+        components: [updateLabel().build(), ...createBoard()],
+        flags: MessageFlags.IsComponentsV2,
+      });
       createMoveCollector();
     }
 
@@ -338,12 +343,17 @@ module.exports = {
         const winnerSymbol = checkWinner();
         if (winnerSymbol) {
           lastGameResult = winnerSymbol === symbols[player1.id] ? 'Vitória' : 'Derrota';
-          const embed = updateEmbed();
-          embed.setDescription(
-            `🏆 **${currentPlayer.username} venceu!**\n\n🔹 **${player1.username}** (X) vs **${player2.id === 'bot' ? 'Bot' : player2.username}** (O)`,
-          );
-          embed.setColor(0xffd700);
-          await buttonInteraction.update({ embeds: [embed], components: [] });
+          const winLabel = new LabelBuilder()
+            .setTitle('🎮 Jogo da Velha')
+            .setDescription(
+              `🏆 **${currentPlayer.username} venceu!**\n\n🔹 **${player1.username}** (X) vs **${player2.id === 'bot' ? 'Bot' : player2.username}** (O)`,
+            )
+            .setColor(0xffd700);
+          await buttonInteraction.update({
+            components: [winLabel.build()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          gameEnded = true;
           moveCollector.stop();
           if (player2.id === 'bot') {
             await updateBotStats(
@@ -355,32 +365,47 @@ module.exports = {
             const loser = currentPlayer.id === player1.id ? player2 : player1;
             await updateUvsStats(currentPlayer.id, loser.id);
           }
-          showPlayAgainButton();
+          showPlayAgainButton(winLabel);
           return;
         }
         if (isBoardFull()) {
           lastGameResult = 'Empate';
-          const embed = updateEmbed();
-          embed.setDescription('🤝 O jogo terminou em empate!');
-          embed.setColor(0x808080);
-          await buttonInteraction.update({ embeds: [embed], components: [] });
+          const drawLabel = new LabelBuilder()
+            .setTitle('🎮 Jogo da Velha')
+            .setDescription('🤝 O jogo terminou em empate!')
+            .setColor(0x808080);
+          await buttonInteraction.update({
+            components: [drawLabel.build()],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          gameEnded = true;
           moveCollector.stop();
           if (player2.id === 'bot') {
             await updateBotStats(player1.id, 'draw', dificuldade);
           } else {
             await updateUvsStatsDraw(player1.id, player2.id);
           }
-          showPlayAgainButton();
+          showPlayAgainButton(drawLabel);
           return;
         }
         currentPlayer = currentPlayer.id === player1.id ? player2 : player1;
-        await buttonInteraction.update({ embeds: [updateEmbed()], components: createBoard() });
+        await buttonInteraction.update({
+          components: [updateLabel().build(), ...createBoard()],
+          flags: MessageFlags.IsComponentsV2,
+        });
         if (currentPlayer.id === 'bot') {
           botPlay(moveCollector);
         }
       });
       moveCollector.on('end', () => {
-        interaction.editReply({ components: [] }).catch(() => {});
+        if (gameEnded) return;
+        // Partida abandonada: remove o tabuleiro, preservando o cabeçalho.
+        interaction
+          .editReply({
+            components: [updateLabel().build()],
+            flags: MessageFlags.IsComponentsV2,
+          })
+          .catch(() => {});
       });
     }
 
@@ -403,54 +428,74 @@ module.exports = {
       const winnerSymbol = checkWinner();
       if (winnerSymbol) {
         lastGameResult = winnerSymbol === symbols[player1.id] ? 'Vitória' : 'Derrota';
-        const embed = updateEmbed();
-        embed.setDescription(`🏆 **Bot venceu!**\n\n🔹 **${player1.username}** (X) vs **Bot** (O)`);
-        embed.setColor(0xffd700);
-        await interaction.editReply({ embeds: [embed], components: [] });
+        const winLabel = new LabelBuilder()
+          .setTitle('🎮 Jogo da Velha')
+          .setDescription(`🏆 **Bot venceu!**\n\n🔹 **${player1.username}** (X) vs **Bot** (O)`)
+          .setColor(0xffd700);
+        await interaction.editReply({
+          components: [winLabel.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        gameEnded = true;
         moveCollector.stop();
         await updateBotStats(
           player1.id,
           winnerSymbol === symbols[player1.id] ? 'win' : 'loss',
           dificuldade,
         );
-        showPlayAgainButton();
+        showPlayAgainButton(winLabel);
         return;
       }
       if (isBoardFull()) {
         lastGameResult = 'Empate';
-        const embed = updateEmbed();
-        embed.setDescription('🤝 O jogo terminou em empate!');
-        embed.setColor(0x808080);
-        await interaction.editReply({ embeds: [embed], components: [] });
+        const drawLabel = new LabelBuilder()
+          .setTitle('🎮 Jogo da Velha')
+          .setDescription('🤝 O jogo terminou em empate!')
+          .setColor(0x808080);
+        await interaction.editReply({
+          components: [drawLabel.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
+        gameEnded = true;
         moveCollector.stop();
         await updateBotStats(player1.id, 'draw', dificuldade);
-        showPlayAgainButton();
+        showPlayAgainButton(drawLabel);
         return;
       }
       currentPlayer = player1;
-      await interaction.editReply({ embeds: [updateEmbed()], components: createBoard() });
+      await interaction.editReply({
+        components: [updateLabel().build(), ...createBoard()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     }
 
-    async function showPlayAgainButton() {
+    async function showPlayAgainButton(finalLabel) {
       const playAgainRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('play_again')
           .setLabel('Jogar Novamente')
           .setStyle(ButtonStyle.Success),
       );
-      const newMessage = await interaction.editReply({ components: [playAgainRow] });
+      const newMessage = await interaction.editReply({
+        components: [finalLabel.build(), playAgainRow],
+        flags: MessageFlags.IsComponentsV2,
+      });
       const playAgainCollector = newMessage.createMessageComponentCollector({
         filter: (i) => i.customId === 'play_again',
         time: 300000,
         max: 1,
       });
       playAgainCollector.on('collect', async (buttonInteraction) => {
-        await buttonInteraction.update({ content: 'Iniciando nova partida...', components: [] });
+        await buttonInteraction.deferUpdate();
+        gameEnded = false;
         startGame();
       });
     }
 
-    await interaction.reply({ embeds: [updateEmbed()], components: createBoard() });
+    await interaction.reply({
+      components: [updateLabel().build(), ...createBoard()],
+      flags: MessageFlags.IsComponentsV2,
+    });
     message = await interaction.fetchReply();
     startGame();
   },

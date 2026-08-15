@@ -1,12 +1,13 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -27,12 +28,12 @@ module.exports = {
         return interaction.editReply('🛒 A loja está vazia no momento. Volte mais tarde!');
       }
 
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setTitle('🛒 Loja Wardizitto')
         .setDescription(
           'Selecione um item no menu abaixo para ver detalhes e comprar.\n\n*Dica: Itens exclusivos estão disponíveis em nosso site!*',
         )
-        .setColor('#E67E22')
+        .setColor(Colors.Orange)
         .setThumbnail(interaction.client.user.displayAvatarURL());
 
       const selectMenu = new StringSelectMenuBuilder()
@@ -56,7 +57,10 @@ module.exports = {
           .setDisabled(true),
       );
 
-      await interaction.editReply({ embeds: [embed], components: [row, rowButtons] });
+      await interaction.editReply({
+        components: [label.build(), row, rowButtons],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (error) {
       interaction.client.services.logger.error('Erro em handler de compatibilidade.', error);
       await interaction.editReply('❌ Erro ao carregar a loja.');

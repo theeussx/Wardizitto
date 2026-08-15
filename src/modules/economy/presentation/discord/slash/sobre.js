@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,7 +18,7 @@ module.exports = {
     const texto = interaction.options.getString('texto');
     const userId = interaction.user.id;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       await query(
@@ -25,13 +26,16 @@ module.exports = {
         [userId, texto, texto],
       );
 
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setTitle('✅ Perfil Atualizado')
         .setDescription(`Sua nova descrição foi definida para:\n\n*${texto}*`)
-        .setColor('#2ECC71')
+        .setColor(Colors.Green)
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (error) {
       interaction.client.services.logger.error('Erro ao atualizar sobre_mim:', error);
       await interaction.editReply('❌ Ocorreu um erro ao atualizar sua descrição.');

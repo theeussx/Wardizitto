@@ -1,12 +1,12 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
   ComponentType,
 } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -39,16 +39,15 @@ module.exports = {
         .setLabel('Cancelar')
         .setStyle(ButtonStyle.Danger),
     );
+    const label = new LabelBuilder()
+      .setColor('Yellow')
+      .setTitle('Confirmar transferência')
+      .setDescription(
+        `Transferir **${amount.toLocaleString('pt-BR')} Wardcoins** para ${receiver}?`,
+      );
     const response = await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('Yellow')
-          .setTitle('Confirmar transferência')
-          .setDescription(
-            `Transferir **${amount.toLocaleString('pt-BR')} Wardcoins** para ${receiver}?`,
-          ),
-      ],
-      components: [row],
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
       withResponse: true,
     });
 
@@ -62,10 +61,10 @@ module.exports = {
       })
       .catch(() => undefined);
     if (!confirmation || confirmation.customId === 'cancel_transfer') {
+      const cancelLabel = new LabelBuilder().setDescription('Transferência cancelada.');
       await interaction.editReply({
-        content: 'Transferência cancelada.',
-        embeds: [],
-        components: [],
+        components: [cancelLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
       });
       return;
     }
@@ -78,10 +77,12 @@ module.exports = {
       interaction.guildId,
       interaction.id,
     );
+    const doneLabel = new LabelBuilder().setDescription(
+      `✅ Transferência concluída. Saldo: **${balance.wallet.toLocaleString('pt-BR')}** Wardcoins.`,
+    );
     await interaction.editReply({
-      content: `✅ Transferência concluída. Saldo: **${balance.wallet.toLocaleString('pt-BR')}** Wardcoins.`,
-      embeds: [],
-      components: [],
+      components: [doneLabel.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

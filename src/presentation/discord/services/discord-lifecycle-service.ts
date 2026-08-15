@@ -1,6 +1,7 @@
-import { ActivityType, EmbedBuilder, WebhookClient, type Guild } from 'discord.js';
+import { ActivityType, MessageFlags, WebhookClient, type Guild } from 'discord.js';
 
 import type { WardizittoClient } from '../client/wardizitto-client.js';
+import { LabelBuilder, Colors } from '../ui/components-v2.js';
 import type { CommandRegistrationService } from './command-registration-service.js';
 
 export class DiscordLifecycleService {
@@ -60,15 +61,17 @@ export class DiscordLifecycleService {
         this.client.services.logger.error('Falha no webhook de guildCreate.', error),
       );
 
-    const embed = new EmbedBuilder()
-      .setColor('#5865f2')
+    const label = new LabelBuilder()
+      .setColor(Colors.Blurple)
       .setTitle('Obrigado por adicionar o Wardizitto!')
       .setDescription(
         'Use os comandos de barra para começar. Administradores podem configurar tickets com `/setup-tickets`.',
       )
       .setTimestamp();
     const owner = await guild.fetchOwner().catch(() => undefined);
-    await owner?.send({ embeds: [embed] }).catch(() => undefined);
+    await owner
+      ?.send({ components: [label.build()], flags: MessageFlags.IsComponentsV2 })
+      .catch(() => undefined);
     this.scheduleServerCountUpdate();
   }
 

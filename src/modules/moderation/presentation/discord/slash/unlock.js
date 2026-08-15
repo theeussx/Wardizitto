@@ -1,4 +1,9 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -8,7 +13,7 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)) {
       return interaction.reply({
-        content: `<:eg_unlock:1353597171462836225> Você não tem permissão para usar este comando.`,
+        content: `${emoji('eg_unlock')} Você não tem permissão para usar este comando.`,
         ephemeral: true,
       });
     }
@@ -18,16 +23,19 @@ module.exports = {
         SendMessages: null,
       });
 
-      const embed = new EmbedBuilder()
-        .setColor('Green')
-        .setTitle('<:eg_unlock:1353597171462836225> Canal Destravado')
+      const label = new LabelBuilder()
+        .setColor(Colors.Green)
+        .setTitle(`${emoji('eg_unlock')} Canal Destravado`)
         .setDescription(
           'Este canal foi **destravado** e os membros agora podem enviar mensagens novamente.',
         )
-        .setFooter({ text: 'Moderação', iconURL: interaction.client.user.displayAvatarURL() })
+        .setFooter('Moderação')
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (error) {
       interaction.client.services.logger.error('Erro em handler de compatibilidade.', error);
       return interaction.reply({

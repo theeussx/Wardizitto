@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,23 +33,21 @@ module.exports = {
         ? `\n...e mais ${permissions.length - maxPermissions} permissões`
         : '');
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle(`Informações do Cargo: ${role.name}`)
       .setColor(role.color || 0x2f3136)
-      .addFields(
-        { name: 'ID', value: role.id, inline: true },
-        { name: 'Mencionável', value: role.mentionable ? 'Sim' : 'Não', inline: true },
-        { name: 'Posição', value: `${role.position}`, inline: true },
-        { name: 'Cor', value: role.hexColor, inline: true },
-        { name: 'Quantidade de Membros', value: `${role.members.size} membro(s)`, inline: true },
-        { name: 'Permissões', value: displayedPermissions || 'Nenhuma' },
-        { name: 'Criado em', value: `<t:${Math.floor(role.createdTimestamp / 1000)}:f>` },
-      )
-      .setFooter({
-        text: `Solicitado por ${interaction.user.tag}`,
-        iconURL: interaction.user.displayAvatarURL(),
-      });
+      .addField('ID', role.id, true)
+      .addField('Mencionável', role.mentionable ? 'Sim' : 'Não', true)
+      .addField('Posição', `${role.position}`, true)
+      .addField('Cor', role.hexColor, true)
+      .addField('Quantidade de Membros', `${role.members.size} membro(s)`, true)
+      .addField('Permissões', displayedPermissions || 'Nenhuma')
+      .addField('Criado em', `<t:${Math.floor(role.createdTimestamp / 1000)}:f>`)
+      .setFooter(`Solicitado por ${interaction.user.tag}`);
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

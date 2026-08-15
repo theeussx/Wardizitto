@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -44,15 +45,15 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
+    const label = new LabelBuilder()
+      .setColor('#f5f5f5')
+      .setTitle(page.title)
+      .setURL(page.fullurl)
+      .setDescription((page.extract || 'Sem resumo disponível.').slice(0, 4000))
+      .setFooter('Fonte: Wikipédia');
     return interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#f5f5f5')
-          .setTitle(page.title)
-          .setURL(page.fullurl)
-          .setDescription((page.extract || 'Sem resumo disponível.').slice(0, 4000))
-          .setFooter({ text: 'Fonte: Wikipédia' }),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

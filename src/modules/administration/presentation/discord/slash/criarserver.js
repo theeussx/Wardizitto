@@ -2,10 +2,10 @@ const {
   SlashCommandBuilder,
   ChannelType,
   PermissionFlagsBits,
-  EmbedBuilder,
   MessageFlags,
   Colors,
 } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 const { z } = require('zod');
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -176,15 +176,13 @@ module.exports = {
       channels: totalChannels,
       cleared: shouldClear,
     });
+    const label = new LabelBuilder()
+      .setColor('Green')
+      .setTitle('✅ Estrutura criada')
+      .setDescription(`Foram criados ${generated.roles.length} cargos e ${totalChannels} canais.`);
     await interaction.editReply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('Green')
-          .setTitle('✅ Estrutura criada')
-          .setDescription(
-            `Foram criados ${generated.roles.length} cargos e ${totalChannels} canais.`,
-          ),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

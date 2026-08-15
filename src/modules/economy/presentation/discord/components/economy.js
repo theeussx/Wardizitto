@@ -1,12 +1,10 @@
-const {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  MessageFlags,
-} = require('discord.js');
+const { MessageFlags, TextInputStyle } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const {
+  LabelBuilder,
+  Colors,
+  createModal,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   async execute(interaction) {
@@ -14,25 +12,26 @@ module.exports = {
     const economy = interaction.client.services.economy;
 
     if (interaction.isButton() && customId === 'atm_manage') {
-      const modal = new ModalBuilder().setCustomId('modal_atm').setTitle('🏦 Banco Wardizitto');
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('atm_action')
-            .setLabel('Digite depositar ou sacar')
-            .setStyle(TextInputStyle.Short)
-            .setMaxLength(10)
-            .setRequired(true),
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('atm_val')
-            .setLabel('Valor ou "tudo"')
-            .setStyle(TextInputStyle.Short)
-            .setMaxLength(30)
-            .setRequired(true),
-        ),
-      );
+      const modal = createModal({
+        customId: 'modal_atm',
+        title: '🏦 Banco Wardizitto',
+        fields: [
+          {
+            customId: 'atm_action',
+            label: 'Digite depositar ou sacar',
+            style: TextInputStyle.Short,
+            maxLength: 10,
+            required: true,
+          },
+          {
+            customId: 'atm_val',
+            label: 'Valor ou "tudo"',
+            style: TextInputStyle.Short,
+            maxLength: 30,
+            required: true,
+          },
+        ],
+      });
       return interaction.showModal(modal);
     }
 
@@ -85,15 +84,18 @@ module.exports = {
           ORDER BY l.item_nome LIMIT 50`,
         [targetId, interaction.guildId],
       );
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setTitle('🎒 Inventário')
-        .setColor('#9b59b6')
+        .setColor(Colors.Purple)
         .setDescription(
           items.length
             ? items.map((item) => `**${item.item_nome}** × ${item.quantidade}`).join('\n')
             : 'O inventário está vazio.',
         );
-      return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      return interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
     }
 
     const account = await economy.getAccount(targetId);
@@ -101,14 +103,13 @@ module.exports = {
     if (account.level >= 10) badges.push('⭐ **Veterano**: nível 10+');
     if (account.wallet + account.bank >= 1_000_000n)
       badges.push('💎 **Milionário**: patrimônio 1M+');
+    const badgeLabel = new LabelBuilder()
+      .setTitle('🏅 Insígnias')
+      .setColor('#f1c40f')
+      .setDescription(badges.join('\n') || 'Nenhuma insígnia conquistada.');
     return interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('🏅 Insígnias')
-          .setColor('#f1c40f')
-          .setDescription(badges.join('\n') || 'Nenhuma insígnia conquistada.'),
-      ],
-      flags: MessageFlags.Ephemeral,
+      components: [badgeLabel.build()],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

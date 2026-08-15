@@ -3,10 +3,10 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
   ComponentType,
   MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -37,15 +37,13 @@ module.exports = {
     }
 
     const customId = `accept_marriage_${proposer.id}_${target.id}`;
+    const label = new LabelBuilder()
+      .setTitle('💍 Pedido de casamento')
+      .setDescription(`${target}\n\n${proposer} quer se casar com ${target}.`)
+      .setColor(Colors.Purple);
     const response = await interaction.reply({
-      content: `${target}`,
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('💍 Pedido de casamento')
-          .setDescription(`${proposer} quer se casar com ${target}.`)
-          .setColor('Purple'),
-      ],
       components: [
+        label.build(),
         new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId(customId)
@@ -53,6 +51,7 @@ module.exports = {
             .setStyle(ButtonStyle.Success),
         ),
       ],
+      flags: MessageFlags.IsComponentsV2,
       withResponse: true,
     });
     const message = response.resource?.message;
@@ -65,20 +64,22 @@ module.exports = {
       })
       .catch(() => undefined);
     if (!acceptance) {
-      await interaction.editReply({ content: 'O pedido expirou.', embeds: [], components: [] });
+      const expiredLabel = new LabelBuilder().setDescription('O pedido expirou.');
+      await interaction.editReply({
+        components: [expiredLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
       return;
     }
 
     await marriages.marry(interaction.guildId, proposer.id, target.id);
+    const marriedLabel = new LabelBuilder()
+      .setTitle('💜 Casamento realizado')
+      .setDescription(`${proposer} e ${target} agora estão casados neste servidor.`)
+      .setColor(Colors.Green);
     await acceptance.update({
-      content: '',
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('💜 Casamento realizado')
-          .setDescription(`${proposer} e ${target} agora estão casados neste servidor.`)
-          .setColor('Green'),
-      ],
-      components: [],
+      components: [marriedLabel.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

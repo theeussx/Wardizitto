@@ -1,7 +1,8 @@
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const Canvas = require('@napi-rs/canvas');
 const { format, differenceInDays } = require('date-fns');
 const { ptBR } = require('date-fns/locale');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -28,13 +29,16 @@ module.exports = {
       );
 
       if (!rows || rows.length === 0) {
-        const embed = new EmbedBuilder()
+        const label = new LabelBuilder()
           .setColor('#FF9B9B')
           .setTitle('💔 Sem casamento')
           .setDescription(`${alvo.username} não está casado(a) no momento!`)
           .setThumbnail(alvo.displayAvatarURL({ dynamic: true }));
 
-        return await interaction.editReply({ embeds: [embed] });
+        return interaction.editReply({
+          components: [label.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
       }
 
       const casamento = rows[0];
@@ -114,32 +118,38 @@ module.exports = {
         name: 'casamento.png', // Nome mais simples para evitar problemas
       });
 
-      // 8. Cria o embed com a imagem
-      const embed = new EmbedBuilder()
+      // 8. Cria o rótulo com a imagem
+      const label = new LabelBuilder()
         .setColor('#FF69B4')
         .setTitle(`💕 Casamento de ${alvo.username}`)
         .setDescription(`Casados desde ${dataFormatada}`)
         .setImage('attachment://casamento.png') // Deve corresponder ao name do attachment
-        .setFooter({ text: 'Felizes para sempre!' });
+        .setFooter('Felizes para sempre!');
 
       // 9. Envia a resposta
       await interaction.editReply({
-        embeds: [embed],
+        components: [label.build()],
         files: [attachment],
-        content: null, // Garante que não há mensagem adicional
+        flags: MessageFlags.IsComponentsV2,
       });
     } catch (error) {
       interaction.client.services.logger.error('Erro no comando ver-casamento:', error);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor('#FF5555')
+      const errorLabel = new LabelBuilder()
+        .setColor(Colors.Red)
         .setTitle('❌ Erro ao gerar imagem do casamento')
         .setDescription('Ocorreu um problema ao criar a imagem. Por favor, tente novamente.');
 
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ embeds: [errorEmbed] });
+        await interaction.editReply({
+          components: [errorLabel.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({
+          components: [errorLabel.build()],
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
       }
     }
   },

@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { isOwner } = require('../../../../../core/security/owner.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -33,21 +34,19 @@ module.exports = {
       targetId: target.id,
       amount: amount.toString(),
     });
+
+    const label = new LabelBuilder()
+      .setColor(Colors.Green)
+      .setTitle('Saldo adicionado')
+      .setDescription(
+        `Foram adicionados **${amount.toLocaleString('pt-BR')} Wardcoins** a ${target}.`,
+      )
+      .addField('Novo saldo da carteira', balance.wallet.toLocaleString('pt-BR'))
+      .setTimestamp();
+
     return interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('Green')
-          .setTitle('Saldo adicionado')
-          .setDescription(
-            `Foram adicionados **${amount.toLocaleString('pt-BR')} Wardcoins** a ${target}.`,
-          )
-          .addFields({
-            name: 'Novo saldo da carteira',
-            value: balance.wallet.toLocaleString('pt-BR'),
-          })
-          .setTimestamp(),
-      ],
-      flags: MessageFlags.Ephemeral,
+      components: [label.build()],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

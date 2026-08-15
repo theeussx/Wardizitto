@@ -1,10 +1,6 @@
-const {
-  SlashCommandBuilder,
-  AttachmentBuilder,
-  EmbedBuilder,
-  MessageFlags,
-} = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const QRCode = require('qrcode');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -26,21 +22,19 @@ module.exports = {
 
     const qrBuffer = await QRCode.toBuffer(pixCode, { errorCorrectionLevel: 'H', width: 300 });
     const attachment = new AttachmentBuilder(qrBuffer, { name: 'pix.png' });
-    const embed = new EmbedBuilder()
-      .setColor('Green')
+    const label = new LabelBuilder()
+      .setColor(Colors.Green)
       .setTitle('💚 Apoie o projeto Wardizitto')
       .setDescription('Obrigado por considerar apoiar o projeto!')
-      .addFields(
-        { name: 'Chave Pix', value: `\`${pixKey}\`` },
-        { name: 'Pix copia e cola', value: `\`\`\`${pixCode}\`\`\`` },
-      )
+      .addField('Chave Pix', `\`${pixKey}\``)
+      .addField('Pix copia e cola', `\`\`\`${pixCode}\`\`\``)
       .setImage('attachment://pix.png')
       .setTimestamp();
 
     await interaction.reply({
-      embeds: [embed],
+      components: [label.build()],
       files: [attachment],
-      flags: MessageFlags.Ephemeral,
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
 
     interaction.client.services.logger.audit('Comando de doação acessado.', {

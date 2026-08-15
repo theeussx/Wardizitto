@@ -1,14 +1,15 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
+  MessageFlags,
 } = require('discord.js');
 const { format, differenceInDays } = require('date-fns');
 const { ptBR } = require('date-fns/locale');
 const { pool } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -28,7 +29,7 @@ module.exports = {
     const itensPorPagina = 10;
     let paginaAtual = interaction.options.getInteger('página') || 1;
 
-    const carregarEmbed = async (pagina) => {
+    const carregarLabel = async (pagina) => {
       pagina = Math.max(1, pagina);
 
       // Total de registros
@@ -71,16 +72,12 @@ module.exports = {
 
       const lista = casaisFormatados.filter(Boolean).join('\n\n') || 'Nenhum casal encontrado.';
 
-      const embed = new EmbedBuilder()
+      const label = new LabelBuilder()
         .setColor('#FF69B4')
         .setTitle(`💑 Top Casais Mais Antigos - Página ${pagina}/${totalPaginas}`)
         .setDescription(lista)
-        .addFields({
-          name: '📊 Total de dias somados nesta página:',
-          value: `${totalDiasTodosCasais} dias`,
-          inline: false,
-        })
-        .setFooter({ text: `Total de ${total} casais registrados` })
+        .addField('📊 Total de dias somados nesta página:', `${totalDiasTodosCasais} dias`)
+        .setFooter(`Total de ${total} casais registrados`)
         .setTimestamp();
 
       const row = new ActionRowBuilder().addComponents(
@@ -100,14 +97,14 @@ module.exports = {
           .setDisabled(pagina === totalPaginas),
       );
 
-      return { embed, row, pagina, totalPaginas };
+      return { label, row, pagina, totalPaginas };
     };
 
-    let { embed, row, pagina } = await carregarEmbed(paginaAtual);
+    let { label, row, pagina } = await carregarLabel(paginaAtual);
 
     const reply = await interaction.editReply({
-      embeds: [embed],
-      components: [row],
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
     });
 
     const collector = reply.createMessageComponentCollector({
@@ -127,8 +124,12 @@ module.exports = {
       if (i.customId === 'proxima') pagina++;
       // Se for atualizar, mantém a mesma página
 
-      const { embed: novoEmbed, row: novaRow } = await carregarEmbed(pagina);
-      await i.update({ embeds: [novoEmbed], components: [novaRow] });
+      const { label: novoLabel, row: novaRow } = await carregarLabel(pagina);
+      label = novoLabel;
+      await i.update({
+        components: [novoLabel.build(), novaRow],
+        flags: MessageFlags.IsComponentsV2,
+      });
     });
 
     collector.on('end', async () => {
@@ -136,7 +137,12 @@ module.exports = {
         const desativado = new ActionRowBuilder().addComponents(
           row.components.map((botao) => botao.setDisabled(true)),
         );
-        await reply.edit({ components: [desativado] }).catch(() => {});
+        await reply
+          .edit({
+            components: [label.build(), desativado],
+            flags: MessageFlags.IsComponentsV2,
+          })
+          .catch(() => {});
       }
     });
   },

@@ -1,10 +1,10 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   MessageFlags,
 } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -44,16 +44,14 @@ module.exports = {
     }
     const user = await userResponse.json();
     const repositories = await repositoriesResponse.json();
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle(`GitHub · ${String(user.name || user.login).slice(0, 200)}`)
       .setURL(user.html_url)
       .setDescription(String(user.bio || 'Sem biografia.').slice(0, 1000))
       .setThumbnail(user.avatar_url)
-      .addFields(
-        { name: 'Repositórios', value: String(user.public_repos), inline: true },
-        { name: 'Seguidores', value: String(user.followers), inline: true },
-        { name: 'Seguindo', value: String(user.following), inline: true },
-      )
+      .addField('Repositórios', String(user.public_repos), true)
+      .addField('Seguidores', String(user.followers), true)
+      .addField('Seguindo', String(user.following), true)
       .setColor(0x24292e);
     if (Array.isArray(repositories) && repositories.length > 0) {
       const menu = new StringSelectMenuBuilder()
@@ -67,10 +65,13 @@ module.exports = {
           })),
         );
       return interaction.editReply({
-        embeds: [embed],
-        components: [new ActionRowBuilder().addComponents(menu)],
+        components: [label.build(), new ActionRowBuilder().addComponents(menu)],
+        flags: MessageFlags.IsComponentsV2,
       });
     }
-    return interaction.editReply({ embeds: [embed] });
+    return interaction.editReply({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

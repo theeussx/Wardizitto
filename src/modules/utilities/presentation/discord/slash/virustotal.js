@@ -1,10 +1,10 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
 const {
   uploadFileToVirusTotal,
@@ -13,15 +13,20 @@ const {
   analyzeDomain,
   fetchAnalysis,
 } = require('../../../../../infrastructure/integrations/virus-total.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 const cooldown = new Set();
 
 const EMOJIS = {
-  search: '<:icons_search:1353597363671011358>',
-  correct: '<:icons_correct:1353597185542979664>',
-  wrong: '<:icons_wrong:1353597190920212573>',
-  hourclock: '<:eg_hourclock:1353597129737637981>',
-  files: '<:eg_files:1353597118144708618>',
-  alert: '<:icons_exclamation:1353597263913553971>',
+  search: emoji('icons_search'),
+  correct: emoji('icons_correct'),
+  wrong: emoji('icons_wrong'),
+  hourclock: emoji('eg_hourclock'),
+  files: emoji('eg_files'),
+  alert: emoji('icons_exclamation'),
 };
 
 module.exports = {
@@ -109,14 +114,11 @@ module.exports = {
 
           const link = `https://www.virustotal.com/gui/object/${analysisData.id.replace(/-/g, '')}/detection`;
 
-          const embed = new EmbedBuilder()
+          const label = new LabelBuilder()
             .setTitle(`${EMOJIS.search} VirusTotal Análise Inicial`)
-            .setDescription(`Escolha se deseja **aguardar** a análise ou **ver direto** no site.`)
-            .setColor(0x5865f2)
-            .setFooter({
-              text: 'Powered by VirusTotal',
-              iconURL: 'https://www.virustotal.com/static/images/favicon.ico',
-            });
+            .setDescription('Escolha se deseja **aguardar** a análise ou **ver direto** no site.')
+            .setColor(Colors.Blurple)
+            .setFooter('Powered by VirusTotal');
 
           const buttons = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -126,7 +128,10 @@ module.exports = {
             new ButtonBuilder().setLabel('🌐 Ver no Site').setStyle(ButtonStyle.Link).setURL(link),
           );
 
-          await interaction.followUp({ embeds: [embed], components: [buttons] });
+          await interaction.followUp({
+            components: [label.build(), buttons],
+            flags: MessageFlags.IsComponentsV2,
+          });
 
           const buttonCollector = interaction.channel.createMessageComponentCollector({
             filter: (btn) => btn.user.id === interaction.user.id,
@@ -135,11 +140,12 @@ module.exports = {
 
           buttonCollector.on('collect', async (btn) => {
             if (btn.customId === 'wait') {
+              const waitingLabel = new LabelBuilder().setDescription(
+                `${EMOJIS.hourclock} Aguardando análise...`,
+              );
               await btn.update({
-                content: `${EMOJIS.hourclock} Aguardando análise...`,
-                embeds: [],
-                components: [],
-                ephemeral: true,
+                components: [waitingLabel.build()],
+                flags: MessageFlags.IsComponentsV2,
               });
 
               const finalData = await fetchAnalysis(analysisData.id);
@@ -158,25 +164,23 @@ module.exports = {
                   .map(([engine, result]) => `> - ${engine}: **${result.category.toUpperCase()}**`)
                   .join('\n') || '> Nenhuma detecção crítica.';
 
-              const resultEmbed = new EmbedBuilder()
+              const resultLabel = new LabelBuilder()
                 .setTitle(
                   `${stats.malicious > 0 ? EMOJIS.wrong : EMOJIS.correct} Resultado da Análise`,
                 )
                 .setColor(stats.malicious > 0 ? 0xed4245 : 0x57f287)
-                .addFields(
-                  { name: 'Maliciosos', value: `${stats.malicious}`, inline: true },
-                  { name: 'Suspeitos', value: `${stats.suspicious}`, inline: true },
-                  { name: 'Harmless', value: `${stats.harmless}`, inline: true },
-                  { name: 'Resultados Detalhados', value: detailedResults.substring(0, 1000) },
-                )
+                .addField('Maliciosos', `${stats.malicious}`, true)
+                .addField('Suspeitos', `${stats.suspicious}`, true)
+                .addField('Harmless', `${stats.harmless}`, true)
+                .addField('Resultados Detalhados', detailedResults.substring(0, 1000))
                 .setURL(link)
-                .setFooter({
-                  text: 'VirusTotal Scan',
-                  iconURL: 'https://www.virustotal.com/static/images/favicon.ico',
-                })
+                .setFooter('VirusTotal Scan')
                 .setTimestamp();
 
-              await interaction.followUp({ embeds: [resultEmbed] });
+              await interaction.followUp({
+                components: [resultLabel.build()],
+                flags: MessageFlags.IsComponentsV2,
+              });
             }
           });
 
