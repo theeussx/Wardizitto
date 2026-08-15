@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { isOwner } = require('../../../../../core/security/owner.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -41,21 +42,20 @@ module.exports = {
       amount: amount.toString(),
       source,
     });
+
+    const label = new LabelBuilder()
+      .setColor(Colors.Orange)
+      .setTitle('Saldo removido')
+      .setDescription(
+        `Foram removidos **${amount.toLocaleString('pt-BR')} Wardcoins** de ${target}.`,
+      )
+      .addField('Carteira', balance.wallet.toLocaleString('pt-BR'), true)
+      .addField('Banco', balance.bank.toLocaleString('pt-BR'), true)
+      .setTimestamp();
+
     return interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('Orange')
-          .setTitle('Saldo removido')
-          .setDescription(
-            `Foram removidos **${amount.toLocaleString('pt-BR')} Wardcoins** de ${target}.`,
-          )
-          .addFields(
-            { name: 'Carteira', value: balance.wallet.toLocaleString('pt-BR'), inline: true },
-            { name: 'Banco', value: balance.bank.toLocaleString('pt-BR'), inline: true },
-          )
-          .setTimestamp(),
-      ],
-      flags: MessageFlags.Ephemeral,
+      components: [label.build()],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

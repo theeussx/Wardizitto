@@ -1,15 +1,15 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
-const emojiIds = require('../../../../../core/config/emojis.json').static;
+const { LabelBuilder, emoji } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 const emojis = {
   slap: '🥊',
-  retribuir: `<:eg_fire:${emojiIds.eg_fire}>`,
+  retribuir: emoji('eg_fire'),
 };
 
 module.exports = {
@@ -34,27 +34,27 @@ module.exports = {
     });
     const data = await response.json();
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle(`${emojis.slap} Tapa!`)
-      .setAuthor({
-        name: interaction.user.username,
-        iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-      })
+      .setAuthor(interaction.user.username, interaction.user.displayAvatarURL({ dynamic: true }))
       .setDescription(`**${interaction.user}** deu um tapa em **${usuario}**! ${emojis.slap}`)
       .setImage(data.url)
       .setColor('#FF4500')
-      .setFooter({ text: 'Tapa enviado com força!' })
+      .setFooter('Tapa enviado com força!')
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('revidar_tapa')
         .setLabel('Revidar Tapa')
-        .setEmoji(emojiIds.eg_fire)
+        .setEmoji(emojis.retribuir)
         .setStyle(ButtonStyle.Danger),
     );
 
-    const message = await interaction.editReply({ embeds: [embed], components: [row] });
+    const message = await interaction.editReply({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
 
     const filter = (i) => i.customId === 'revidar_tapa';
     const collector = message.createMessageComponentCollector({ filter, time: 30000, max: 1 });
@@ -71,22 +71,29 @@ module.exports = {
         signal: AbortSignal.timeout(interaction.client.services.config.HTTP_TIMEOUT_MS),
       }).then((res) => res.json());
 
-      const returnEmbed = new EmbedBuilder()
+      const returnLabel = new LabelBuilder()
         .setTitle(`${emojis.slap} Revanche!`)
         .setDescription(
           `**${usuario}** revidou e deu um tapa em **${interaction.user}**! ${emojis.slap}`,
         )
         .setImage(revanche.url)
         .setColor('#FF6347')
-        .setFooter({ text: 'Toma essa de volta!' })
+        .setFooter('Toma essa de volta!')
         .setTimestamp();
 
-      await i.update({ embeds: [returnEmbed], components: [] });
+      await i.update({
+        components: [returnLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     });
 
     collector.on('end', (collected) => {
       if (collected.size === 0) {
-        message.edit({ components: [] }); // Remove botão se ninguém revidar
+        // Remove o botão sem apagar o conteúdo do rótulo.
+        message.edit({
+          components: [label.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
       }
     });
   },

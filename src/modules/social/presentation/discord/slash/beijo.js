@@ -1,17 +1,11 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-
-// Emojis personalizados
-const emojis = {
-  kiss: '<:eg_heart:1353597127091294208>',
-  retribuir: '<:icons_heart:1353597437922775082>',
-  alerta: '<:eg_cross:1353597108640415754>',
-  corno: '<:eg_netual:1353597145646759986>',
-  casal: '<:icons_verified:1353597412157034507>',
-  destaque: '<:eg_star:1353597159752077419>',
-  coracao: '💔',
-  alianca: '💍',
-};
+const {
+  SlashCommandBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+} = require('discord.js');
+const { LabelBuilder, emoji } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -30,10 +24,10 @@ module.exports = {
     const client = interaction.client;
 
     if (usuario.bot)
-      return interaction.editReply({ content: `${emojis.alerta} Você não pode beijar bots!` });
+      return interaction.editReply({ content: `${emoji('eg_cross')} Você não pode beijar bots!` });
     if (usuario.id === autor.id)
       return interaction.editReply({
-        content: `${emojis.alerta} Você não pode beijar a si mesmo!`,
+        content: `${emoji('eg_cross')} Você não pode beijar a si mesmo!`,
       });
 
     // Obter gif de beijo
@@ -46,7 +40,9 @@ module.exports = {
       gif = data.url;
     } catch (err) {
       interaction.client.services.logger.error('❌ Erro ao buscar gif:', err);
-      return interaction.editReply({ content: `${emojis.alerta} Erro ao buscar o gif de beijo.` });
+      return interaction.editReply({
+        content: `${emoji('eg_cross')} Erro ao buscar o gif de beijo.`,
+      });
     }
 
     // Busca parceiros em paralelo
@@ -73,34 +69,29 @@ module.exports = {
         : undefined;
     } catch (error) {
       interaction.client.services.logger.error('❌ Erro ao buscar parceiros:', error);
-      return interaction.editReply({ content: `${emojis.alerta} Erro ao buscar informações.` });
+      return interaction.editReply({ content: `${emoji('eg_cross')} Erro ao buscar informações.` });
     }
 
     const saoCasadosEntreSi = parceiroDoAutor === usuario.id || parceiroDoAlvo === autor.id;
 
-    const embed = new EmbedBuilder()
-      .setAuthor({ name: autor.username, iconURL: autor.displayAvatarURL({ dynamic: true }) })
-      .setImage(gif)
-      .setTimestamp();
-
+    let title;
+    let description;
+    let color;
+    let footer;
     if (saoCasadosEntreSi) {
-      embed
-        .setTitle(`${emojis.destaque} AMOR VERDADEIRO! ${emojis.alianca}`)
-        .setDescription(
-          `${emojis.casal} **${autor}** e **${usuario}** selaram seu amor com um beijo apaixonado!\n\n` +
-            `${emojis.destaque} Casal oficial detectado!\n${emojis.alianca} Que esse relacionamento continue abençoado!`,
-        )
-        .setColor(0xff69b4)
-        .setFooter({ text: 'Casal abençoado por ErislyBot ✨' });
+      title = `${emoji('eg_star')} AMOR VERDADEIRO! 💍`;
+      description =
+        `${emoji('icons_verified')} **${autor}** e **${usuario}** selaram seu amor com um beijo apaixonado!\n\n` +
+        `${emoji('eg_star')} Casal oficial detectado!\n💍 Que esse relacionamento continue abençoado!`;
+      color = 0xff69b4;
+      footer = 'Casal abençoado por ErislyBot ✨';
     } else {
-      embed
-        .setTitle(`${emojis.kiss} BEIJO ROMÂNTICO!`)
-        .setDescription(
-          `**${autor}** deu um beijo em **${usuario}**! ${emojis.kiss}\n\n` +
-            `_Será que isso vai virar um romance?_ ${emojis.retribuir}`,
-        )
-        .setColor(0xff1493)
-        .setFooter({ text: 'Beijos enviados com amor 💖' });
+      title = `${emoji('eg_heart')} BEIJO ROMÂNTICO!`;
+      description =
+        `**${autor}** deu um beijo em **${usuario}**! ${emoji('eg_heart')}\n\n` +
+        `_Será que isso vai virar um romance?_ ${emoji('icons_heart')}`;
+      color = 0xff1493;
+      footer = 'Beijos enviados com amor 💖';
     }
 
     // CORNO 1: autor traiu
@@ -108,7 +99,7 @@ module.exports = {
       try {
         const user = await client.users.fetch(parceiroDoAutor);
         await user.send({
-          content: `${emojis.alerta} **ALERTA DE TRAIÇÃO!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${autor.username}** deu um beijo em **${usuario.username}**!\n${emojis.coracao} Esperamos que seja apenas um mal-entendido...`,
+          content: `${emoji('eg_cross')} **ALERTA DE TRAIÇÃO!** ${emoji('eg_cross')}\n\n${emoji('eg_netual')} Seu parceiro(a) **${autor.username}** deu um beijo em **${usuario.username}**!\n💔 Esperamos que seja apenas um mal-entendido...`,
         });
       } catch (err) {
         interaction.client.services.logger.error(
@@ -116,10 +107,7 @@ module.exports = {
           err.message,
         );
       }
-      embed.setDescription(
-        embed.data.description +
-          `\n\n${emojis.alerta} **${autor.username}** parece estar comprometido(a)... ${emojis.corno}`,
-      );
+      description += `\n\n${emoji('eg_cross')} **${autor.username}** parece estar comprometido(a)... ${emoji('eg_netual')}`;
     }
 
     // CORNO 2: beijaram seu parceiro
@@ -127,7 +115,7 @@ module.exports = {
       try {
         const user = await client.users.fetch(autor.id);
         await user.send({
-          content: `${emojis.alerta} **ALERTA DE TRAIÇÃO!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${usuario.username}** recebeu e retribuiu um beijo de **${autor.username}**!\n${emojis.coracao} A confiança está sendo colocada à prova.`,
+          content: `${emoji('eg_cross')} **ALERTA DE TRAIÇÃO!** ${emoji('eg_cross')}\n\n${emoji('eg_netual')} Seu parceiro(a) **${usuario.username}** recebeu e retribuiu um beijo de **${autor.username}**!\n💔 A confiança está sendo colocada à prova.`,
         });
       } catch (err) {
         interaction.client.services.logger.error(
@@ -137,15 +125,27 @@ module.exports = {
       }
     }
 
+    const label = new LabelBuilder()
+      .setAuthor(autor.username, autor.displayAvatarURL({ dynamic: true }))
+      .setTitle(title)
+      .setDescription(description)
+      .setImage(gif)
+      .setColor(color)
+      .setFooter(footer)
+      .setTimestamp();
+
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('retribuir_beijo')
         .setLabel('Retribuir Beijo')
-        .setEmoji(emojis.retribuir)
+        .setEmoji(emoji('icons_heart'))
         .setStyle(ButtonStyle.Primary),
     );
 
-    const message = await interaction.editReply({ embeds: [embed], components: [row] });
+    const message = await interaction.editReply({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
 
     const filter = (i) => i.customId === 'retribuir_beijo';
     const collector = message.createMessageComponentCollector({ filter, time: 30000, max: 1 });
@@ -153,7 +153,7 @@ module.exports = {
     collector.on('collect', async (i) => {
       if (i.user.id !== usuario.id) {
         return i.reply({
-          content: `${emojis.alerta} Apenas ${usuario} pode retribuir esse beijo!`,
+          content: `${emoji('eg_cross')} Apenas ${usuario} pode retribuir esse beijo!`,
           ephemeral: true,
         });
       }
@@ -165,27 +165,23 @@ module.exports = {
         });
         const data = await response.json();
         novoGif = data.url;
-      } catch (error) {
-        return i.reply({ content: `${emojis.alerta} Erro ao buscar novo gif.`, ephemeral: true });
+      } catch {
+        return i.reply({
+          content: `${emoji('eg_cross')} Erro ao buscar novo gif.`,
+          ephemeral: true,
+        });
       }
 
-      const retribuirEmbed = new EmbedBuilder()
-        .setTitle(`${emojis.kiss} BEIJO RETRIBUÍDO! ${emojis.retribuir}`)
-        .setDescription(
-          `**${usuario}** retribuiu o beijo de **${autor}**! ${emojis.kiss}\n\n` +
-            `_O romance está florescendo..._ ${emojis.destaque}`,
-        )
-        .setImage(novoGif)
-        .setColor('#FF69B4')
-        .setFooter({ text: 'Beijo retribuído com carinho 💞' })
-        .setTimestamp();
+      let retribuirDescription =
+        `**${usuario}** retribuiu o beijo de **${autor}**! ${emoji('eg_heart')}\n\n` +
+        `_O romance está florescendo..._ ${emoji('eg_star')}`;
 
       // CORNO 3: alvo retribuiu, mas é casado com outro
       if (parceiroDoAlvo && parceiroDoAlvo !== autor.id) {
         try {
           const user = await client.users.fetch(parceiroDoAlvo);
           await user.send({
-            content: `${emojis.alerta} **TRAIÇÃO CONFIRMADA!** ${emojis.alerta}\n\n${emojis.corno} Seu parceiro(a) **${usuario.username}** retribuiu um beijo de **${autor.username}**!\n${emojis.coracao} A confiança está sendo colocada à prova.`,
+            content: `${emoji('eg_cross')} **TRAIÇÃO CONFIRMADA!** ${emoji('eg_cross')}\n\n${emoji('eg_netual')} Seu parceiro(a) **${usuario.username}** retribuiu um beijo de **${autor.username}**!\n💔 A confiança está sendo colocada à prova.`,
           });
         } catch (err) {
           interaction.client.services.logger.error(
@@ -193,19 +189,27 @@ module.exports = {
             err.message,
           );
         }
-        retribuirEmbed.setDescription(
-          retribuirEmbed.data.description +
-            `\n\n${emojis.alerta} **${usuario.username}** parece estar comprometido(a)... ${emojis.corno}`,
-        );
+        retribuirDescription += `\n\n${emoji('eg_cross')} **${usuario.username}** parece estar comprometido(a)... ${emoji('eg_netual')}`;
       }
 
-      await i.update({ embeds: [retribuirEmbed], components: [] });
+      const retribuirLabel = new LabelBuilder()
+        .setTitle(`${emoji('eg_heart')} BEIJO RETRIBUÍDO! ${emoji('icons_heart')}`)
+        .setDescription(retribuirDescription)
+        .setImage(novoGif)
+        .setColor('#FF69B4')
+        .setFooter('Beijo retribuído com carinho 💞')
+        .setTimestamp();
+
+      await i.update({
+        components: [retribuirLabel.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     });
 
     collector.on('end', (collected) => {
       if (collected.size === 0) {
         message
-          .edit({ components: [] })
+          .edit({ components: [label.build()], flags: MessageFlags.IsComponentsV2 })
           .catch((error) =>
             interaction.client.services.logger.error('Falha ao remover componentes.', error),
           );

@@ -4,9 +4,10 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ActionRowBuilder,
-  EmbedBuilder,
   PermissionFlagsBits,
+  MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -70,18 +71,15 @@ module.exports = {
       });
     }
 
-    // Criando a embed personalizada
-    const embed = new EmbedBuilder()
-      .setColor(0x3498db) // Cor azul
+    // Criando o rótulo personalizado
+    const label = new LabelBuilder()
+      .setColor(Colors.Blue)
       .setTitle(titulo)
       .setDescription(descricao)
-      .setFooter({
-        text: `Solicitado por ${interaction.user.tag}`,
-        iconURL: interaction.user.displayAvatarURL(),
-      })
+      .setFooter(`Solicitado por ${interaction.user.tag}`)
       .setTimestamp();
 
-    if (imagem) embed.setImage(imagem);
+    if (imagem) label.setImage(imagem);
 
     // Criando o botão
     const button = new ButtonBuilder().setLabel(botao).setStyle(ButtonStyle.Link).setURL(url);
@@ -89,10 +87,10 @@ module.exports = {
     // Criando a linha de botões
     const row = new ActionRowBuilder().addComponents(button);
 
-    // Enviando a mensagem com a embed e o botão
+    // Enviando a mensagem com o rótulo e o botão
     await interaction.reply({
-      embeds: [embed],
-      components: [row],
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

@@ -15,6 +15,7 @@ export default defineConfig({
         'src/application/services/rate-limiter.ts',
         'src/infrastructure/cache/ttl-cache.ts',
         'src/infrastructure/http/safe-http-client.ts',
+        'src/presentation/discord/ui/components-v2.ts',
       ],
       thresholds: {
         lines: 80,

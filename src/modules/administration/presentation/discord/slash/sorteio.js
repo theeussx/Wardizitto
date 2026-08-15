@@ -1,27 +1,21 @@
 const {
   SlashCommandBuilder,
   PermissionFlagsBits,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
-
-function getEmoji(name) {
-  const emojis = {
-    gift: '<:icons_gift:1353597120761958462>',
-    correct: '<:icons_correct:1353597444918607882>',
-    wrong: '<:icons_wrong:1353597152218619985>',
-    warning: '<:icons_warning:1353597114017648821>',
-    people: '<:icons_people:1353597189414457429>',
-  };
-  return emojis[name] || '🎉';
-}
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('sorteio')
-    .setDescription(`「Administração」Inicia um sorteio no canal atual`)
+    .setDescription('「Administração」Inicia um sorteio no canal atual')
     .addStringOption((option) =>
       option
         .setName('duração')
@@ -47,20 +41,20 @@ module.exports = {
     const durationMs = this.parseDuration(duração);
     if (!durationMs) {
       return interaction.reply({
-        content: `${getEmoji('wrong')} **Duração inválida!** Use um formato como \`1m\`, \`1h\`, \`1d\`.`,
+        content: `${emoji('icons_wrong')} **Duração inválida!** Use um formato como \`1m\`, \`1h\`, \`1d\`.`,
         ephemeral: true,
       });
     }
 
-    // Criar embed do sorteio
+    // Criar rótulo do sorteio
     const endTime = Date.now() + durationMs;
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setColor(0xffd700) // Dourado para sorteio
-      .setTitle(`${getEmoji('gift')} **Sorteio Iniciado!**`)
+      .setTitle(`${emoji('eg_gift')} **Sorteio Iniciado!**`)
       .setDescription(
         `🎁 **Prêmio:** ${prêmio}\n🏆 **Vencedores:** ${vencedores}\n⏰ **Termina em:** <t:${Math.floor(endTime / 1000)}:R>`,
       )
-      .setFooter({ text: `Sorteio criado por ${interaction.user.username}` });
+      .setFooter(`Sorteio criado por ${interaction.user.username}`);
 
     // Botões de participação e visualização
     const row = new ActionRowBuilder().addComponents(
@@ -68,18 +62,21 @@ module.exports = {
         .setCustomId('participar')
         .setLabel('Participar')
         .setStyle(ButtonStyle.Primary)
-        .setEmoji(getEmoji('gift')),
+        .setEmoji(emoji('eg_gift')),
       new ButtonBuilder()
         .setCustomId('ver_participantes')
         .setLabel('Ver Participantes')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji(getEmoji('people')),
+        .setEmoji(emoji('icons_people')),
     );
 
-    const sorteioMessage = await interaction.channel.send({ embeds: [embed], components: [row] });
+    const sorteioMessage = await interaction.channel.send({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
 
     await interaction.editReply({
-      content: `${getEmoji('correct')} **Sorteio iniciado com sucesso!**`,
+      content: `${emoji('icons_correct')} **Sorteio iniciado com sucesso!**`,
       ephemeral: true,
     });
 
@@ -92,19 +89,19 @@ module.exports = {
         if (!participantes.has(i.user.id)) {
           participantes.add(i.user.id);
           await i.reply({
-            content: `${getEmoji('correct')} Você entrou no sorteio! Boa sorte! 🍀`,
+            content: `${emoji('icons_correct')} Você entrou no sorteio! Boa sorte! 🍀`,
             ephemeral: true,
           });
         } else {
           await i.reply({
-            content: `${getEmoji('warning')} Você já está participando!`,
+            content: `${emoji('icons_warning')} Você já está participando!`,
             ephemeral: true,
           });
         }
       } else if (i.customId === 'ver_participantes') {
         if (participantes.size === 0) {
           await i.reply({
-            content: `${getEmoji('warning')} Nenhum participante ainda.`,
+            content: `${emoji('icons_warning')} Nenhum participante ainda.`,
             ephemeral: true,
           });
         } else {
@@ -112,7 +109,7 @@ module.exports = {
             .map((id) => `<@${id}>`)
             .join('\n');
           await i.reply({
-            content: `${getEmoji('people')} **Participantes (${participantes.size}):**\n${listaParticipantes}`,
+            content: `${emoji('icons_people')} **Participantes (${participantes.size}):**\n${listaParticipantes}`,
             ephemeral: true,
           });
         }
@@ -126,7 +123,7 @@ module.exports = {
 
         if (participantesArray.length === 0) {
           await interaction.channel.send({
-            content: `${getEmoji('wrong')} O sorteio terminou, mas ninguém participou.`,
+            content: `${emoji('icons_wrong')} O sorteio terminou, mas ninguém participou.`,
           });
           return;
         }
@@ -141,22 +138,22 @@ module.exports = {
         }
 
         const vencedoresMention = ganhadores.map((id) => `<@${id}>`).join(', ');
-        const embedFinal = new EmbedBuilder()
-          .setColor(0x00ff00) // Verde para sucesso
-          .setTitle(`${getEmoji('gift')} **Sorteio Encerrado!**`)
+        const finalLabel = new LabelBuilder()
+          .setColor(Colors.Green)
+          .setTitle(`${emoji('eg_gift')} **Sorteio Encerrado!**`)
           .setDescription(
             `🎁 **Prêmio:** ${prêmio}\n🏆 **Vencedores:** ${vencedoresMention}\n🎉 **Parabéns aos vencedores!**`,
           )
-          .setFooter({ text: `Sorteio realizado por ${interaction.user.username}` });
+          .setFooter(`Sorteio realizado por ${interaction.user.username}`);
 
         await interaction.channel.send({
-          content: `🎉 **Parabéns aos vencedores!** ${vencedoresMention}`,
-          embeds: [embedFinal],
+          components: [finalLabel.build()],
+          flags: MessageFlags.IsComponentsV2,
         });
       } catch (error) {
         interaction.client.services.logger.error('Erro ao finalizar o sorteio:', error);
         await interaction.channel.send({
-          content: `${getEmoji('wrong')} **Erro ao finalizar o sorteio!**`,
+          content: `${emoji('icons_wrong')} **Erro ao finalizar o sorteio!**`,
         });
       }
     });

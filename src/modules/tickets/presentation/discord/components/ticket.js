@@ -1,16 +1,18 @@
 const {
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
   PermissionFlagsBits,
-  ModalBuilder,
-  TextInputBuilder,
   TextInputStyle,
   MessageFlags,
 } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const {
+  LabelBuilder,
+  Colors,
+  createModal,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 const ephemeral = (content) => ({ content, flags: MessageFlags.Ephemeral });
 const isAdministrator = (interaction) =>
@@ -27,10 +29,11 @@ const ticketConfig = async (guildId) =>
     )
   )[0];
 
-const sendLog = async (guild, channelId, embed) => {
+const sendLog = async (guild, channelId, label) => {
   if (!channelId) return;
   const channel = await guild.channels.fetch(channelId).catch(() => undefined);
-  if (channel?.isSendable()) await channel.send({ embeds: [embed] });
+  if (channel?.isSendable())
+    await channel.send({ components: [label.build()], flags: MessageFlags.IsComponentsV2 });
 };
 
 module.exports = {
@@ -123,22 +126,22 @@ module.exports = {
             .setLabel('Assumir')
             .setStyle(ButtonStyle.Success),
         );
+        const openLabel = new LabelBuilder()
+          .setTitle(config.embed_title || 'Ticket aberto')
+          .setDescription(
+            `<@&${config.support_role_id}> ${user}\n\n${config.ticket_message || 'Descreva sua solicitação com detalhes.'}`,
+          )
+          .setColor(config.embed_color || '#2f3136');
         await createdChannel.send({
-          content: `<@&${config.support_role_id}> ${user}`,
-          embeds: [
-            new EmbedBuilder()
-              .setTitle(config.embed_title || 'Ticket aberto')
-              .setDescription(config.ticket_message || 'Descreva sua solicitação com detalhes.')
-              .setColor(config.embed_color || '#2f3136'),
-          ],
-          components: [controls],
+          components: [openLabel.build(), controls],
+          flags: MessageFlags.IsComponentsV2,
         });
         await sendLog(
           guild,
           config.logs_channel_id,
-          new EmbedBuilder()
+          new LabelBuilder()
             .setTitle('Ticket aberto')
-            .setColor('Green')
+            .setColor(Colors.Green)
             .setDescription(`${user} abriu ${createdChannel}.`)
             .setTimestamp(),
         );
@@ -199,9 +202,9 @@ module.exports = {
       await sendLog(
         guild,
         config?.logs_channel_id,
-        new EmbedBuilder()
+        new LabelBuilder()
           .setTitle('Ticket fechado')
-          .setColor('Red')
+          .setColor(Colors.Red)
           .setDescription(`<@${ticket.user_id}> · fechado por ${user}`)
           .setTimestamp(),
       );
@@ -213,43 +216,40 @@ module.exports = {
 
     if (interaction.isButton() && customId === 'config_ticket_appearance') {
       if (!isAdministrator(interaction)) return interaction.reply(ephemeral('❌ Acesso negado.'));
-      const modal = new ModalBuilder()
-        .setCustomId('modal_ticket_appearance')
-        .setTitle('Aparência do ticket');
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('embed_title')
-            .setLabel('Título')
-            .setMaxLength(255)
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false),
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('embed_description')
-            .setLabel('Descrição do painel')
-            .setMaxLength(2000)
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false),
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('embed_color')
-            .setLabel('Cor hexadecimal (#5865F2)')
-            .setMaxLength(7)
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false),
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('ticket_message')
-            .setLabel('Mensagem do ticket')
-            .setMaxLength(2000)
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false),
-        ),
-      );
+      const modal = createModal({
+        customId: 'modal_ticket_appearance',
+        title: 'Aparência do ticket',
+        fields: [
+          {
+            customId: 'embed_title',
+            label: 'Título',
+            maxLength: 255,
+            style: TextInputStyle.Short,
+            required: false,
+          },
+          {
+            customId: 'embed_description',
+            label: 'Descrição do painel',
+            maxLength: 2000,
+            style: TextInputStyle.Paragraph,
+            required: false,
+          },
+          {
+            customId: 'embed_color',
+            label: 'Cor hexadecimal (#5865F2)',
+            maxLength: 7,
+            style: TextInputStyle.Short,
+            required: false,
+          },
+          {
+            customId: 'ticket_message',
+            label: 'Mensagem do ticket',
+            maxLength: 2000,
+            style: TextInputStyle.Paragraph,
+            required: false,
+          },
+        ],
+      });
       return interaction.showModal(modal);
     }
 
@@ -280,14 +280,13 @@ module.exports = {
         ? await guild.channels.fetch(config.panel_channel_id).catch(() => undefined)
         : undefined;
       if (channel?.isSendable() !== true) return interaction.reply(ephemeral('❌ Canal inválido.'));
+      const panelLabel = new LabelBuilder()
+        .setTitle(config.embed_title || '🎫 Central de Suporte')
+        .setDescription(config.embed_description || 'Clique abaixo para abrir um ticket.')
+        .setColor(config.embed_color || '#2f3136');
       const message = await channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(config.embed_title || '🎫 Central de Suporte')
-            .setDescription(config.embed_description || 'Clique abaixo para abrir um ticket.')
-            .setColor(config.embed_color || '#2f3136'),
-        ],
         components: [
+          panelLabel.build(),
           new ActionRowBuilder().addComponents(
             new ButtonBuilder()
               .setCustomId('open_ticket')
@@ -295,6 +294,7 @@ module.exports = {
               .setStyle(ButtonStyle.Primary),
           ),
         ],
+        flags: MessageFlags.IsComponentsV2,
       });
       await query('UPDATE tickets_config SET panel_message_id = ? WHERE guild_id = ?', [
         message.id,

@@ -1,11 +1,16 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
+  MessageFlags,
 } = require('discord.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -28,11 +33,11 @@ module.exports = {
     const sub = interaction.options.getSubcommand();
 
     // Emojis
-    const emojiStar = '<:eg_star:1353597159752077419>';
-    const emojiBot = '<:eg_bot:1353597099563946026>';
-    const emojiUser = '<:eg_member:1353597138411585628>';
-    const emojiLeft = '<:icons_leftarrow:1353597444918607882>';
-    const emojiRight = '<:icons_rightarrow:1353597358742568980>';
+    const emojiStar = emoji('eg_star');
+    const emojiBot = emoji('eg_bot');
+    const emojiUser = emoji('eg_member');
+    const emojiLeft = emoji('icons_leftarrow');
+    const emojiRight = emoji('icons_rightarrow');
 
     // ===== /placar usuário =====
     if (sub === 'usuário') {
@@ -54,27 +59,27 @@ module.exports = {
         const bot = botRows[0] || {};
         const pvp = uvsRows[0] || {};
 
-        const embed = new EmbedBuilder()
+        const label = new LabelBuilder()
           .setTitle(`${emojiStar} Placar de ${user.username}`)
-          .setColor(0x5865f2)
-          .addFields(
-            {
-              name: `${emojiBot} Contra o Bot`,
-              value:
-                `**Vitórias:** ${bot.wins || 0}\n**Empates:** ${bot.draws || 0}\n**Derrotas:** ${bot.losses || 0}\n\n` +
-                `**Fácil:** ${bot.facil_wins || 0}/${bot.facil_draws || 0}/${bot.facil_losses || 0}\n` +
-                `**Médio:** ${bot.medio_wins || 0}/${bot.medio_draws || 0}/${bot.medio_losses || 0}\n` +
-                `**Difícil:** ${bot.dificil_wins || 0}/${bot.dificil_draws || 0}/${bot.dificil_losses || 0}`,
-              inline: true,
-            },
-            {
-              name: `${emojiUser} Contra outros`,
-              value: `**Vitórias:** ${pvp.wins || 0}\n**Empates:** ${pvp.draws || 0}\n**Derrotas:** ${pvp.losses || 0}`,
-              inline: true,
-            },
+          .setColor(Colors.Blurple)
+          .addField(
+            `${emojiBot} Contra o Bot`,
+            `**Vitórias:** ${bot.wins || 0}\n**Empates:** ${bot.draws || 0}\n**Derrotas:** ${bot.losses || 0}\n\n` +
+              `**Fácil:** ${bot.facil_wins || 0}/${bot.facil_draws || 0}/${bot.facil_losses || 0}\n` +
+              `**Médio:** ${bot.medio_wins || 0}/${bot.medio_draws || 0}/${bot.medio_losses || 0}\n` +
+              `**Difícil:** ${bot.dificil_wins || 0}/${bot.dificil_draws || 0}/${bot.dificil_losses || 0}`,
+            true,
+          )
+          .addField(
+            `${emojiUser} Contra outros`,
+            `**Vitórias:** ${pvp.wins || 0}\n**Empates:** ${pvp.draws || 0}\n**Derrotas:** ${pvp.losses || 0}`,
+            true,
           );
 
-        return interaction.reply({ embeds: [embed], ephemeral: false });
+        return interaction.reply({
+          components: [label.build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
       } catch (error) {
         interaction.client.services.logger.error('❌ Erro ao buscar estatísticas:', error);
         return interaction.reply({
@@ -103,7 +108,7 @@ module.exports = {
         const botSlice = botRanking.slice(page * 10, (page + 1) * 10);
         const uvsSlice = uvsRanking.slice(page * 10, (page + 1) * 10);
 
-        let botDesc = botSlice.length
+        const botDesc = botSlice.length
           ? botSlice
               .map(
                 (user, i) =>
@@ -112,7 +117,7 @@ module.exports = {
               .join('\n')
           : '*Nenhum jogador registrado.*';
 
-        let uvsDesc = uvsSlice.length
+        const uvsDesc = uvsSlice.length
           ? uvsSlice
               .map(
                 (user, i) =>
@@ -122,14 +127,12 @@ module.exports = {
           : '*Nenhum jogador registrado.*';
 
         paginas.push(
-          new EmbedBuilder()
+          new LabelBuilder()
             .setTitle(`${emojiStar} Ranking de Jogadores`)
-            .setColor(0x5865f2)
-            .addFields(
-              { name: `${emojiBot} Contra o Bot`, value: botDesc },
-              { name: `${emojiUser} Contra Usuários`, value: uvsDesc },
-            )
-            .setFooter({ text: `Página ${page + 1} de ${totalPaginas}` }),
+            .setColor(Colors.Blurple)
+            .addField(`${emojiBot} Contra o Bot`, botDesc)
+            .addField(`${emojiUser} Contra Usuários`, uvsDesc)
+            .setFooter(`Página ${page + 1} de ${totalPaginas}`),
         );
       }
 
@@ -149,9 +152,8 @@ module.exports = {
       );
 
       const msg = await interaction.reply({
-        embeds: [paginas[paginaAtual]],
-        components: [row],
-        ephemeral: false,
+        components: [paginas[paginaAtual].build(), row],
+        flags: MessageFlags.IsComponentsV2,
         fetchReply: true,
       });
 
@@ -174,14 +176,17 @@ module.exports = {
         row.components[1].setDisabled(paginaAtual === paginas.length - 1);
 
         await i.update({
-          embeds: [paginas[paginaAtual]],
-          components: [row],
+          components: [paginas[paginaAtual].build(), row],
+          flags: MessageFlags.IsComponentsV2,
         });
       });
 
       collector.on('end', async () => {
         try {
-          await msg.edit({ components: [] });
+          await msg.edit({
+            components: [paginas[paginaAtual].build()],
+            flags: MessageFlags.IsComponentsV2,
+          });
         } catch (error) {
           interaction.client.services.logger.error('❌ Erro ao remover componentes:', error);
         }

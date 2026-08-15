@@ -5,8 +5,9 @@ const {
   StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
+  MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -59,18 +60,18 @@ module.exports = {
       );
     };
 
-    const embed = new EmbedBuilder()
-      .setTitle(`Servidores do Bot — Página ${page + 1}/${totalPages}`)
-      .setDescription('Selecione um servidor abaixo para gerar um convite.')
-      .setColor('Blue');
+    const buildLabel = (page) =>
+      new LabelBuilder()
+        .setTitle(`Servidores do Bot — Página ${page + 1}/${totalPages}`)
+        .setDescription('Selecione um servidor abaixo para gerar um convite.')
+        .setColor('Blue');
 
     const rowSelect = new ActionRowBuilder().addComponents(createSelectMenu(page));
     const rowButtons = createButtons();
 
     await interaction.reply({
-      embeds: [embed],
-      components: [rowSelect, rowButtons],
-      ephemeral: true,
+      components: [buildLabel(page).build(), rowSelect, rowButtons],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
 
     const msg = await interaction.fetchReply();
@@ -86,22 +87,19 @@ module.exports = {
         if (i.customId === 'anterior') page--;
         else if (i.customId === 'proxima') page++;
 
-        const newEmbed = EmbedBuilder.from(embed).setTitle(
-          `Servidores do Bot — Página ${page + 1}/${totalPages}`,
-        );
         const newSelectRow = new ActionRowBuilder().addComponents(createSelectMenu(page));
         const newButtonsRow = createButtons();
 
         return i.update({
-          embeds: [newEmbed],
-          components: [newSelectRow, newButtonsRow],
+          components: [buildLabel(page).build(), newSelectRow, newButtonsRow],
+          flags: MessageFlags.IsComponentsV2,
         });
       } else if (i.isStringSelectMenu()) {
         const guildId = i.values[0];
         const guild = interaction.client.guilds.cache.get(guildId);
 
         if (!guild) {
-          return i.update({ content: 'Servidor não encontrado.', components: [], embeds: [] });
+          return i.update({ content: 'Servidor não encontrado.', components: [] });
         }
 
         try {
@@ -114,7 +112,6 @@ module.exports = {
             return i.update({
               content: 'Nenhum canal com permissão para criar convite foi encontrado.',
               components: [],
-              embeds: [],
             });
           }
 
@@ -122,21 +119,24 @@ module.exports = {
           return i.update({
             content: `Convite para **${guild.name}**: ${invite.url}`,
             components: [],
-            embeds: [],
           });
         } catch (err) {
           interaction.client.services.logger.error('Erro em handler de compatibilidade.', err);
           return i.update({
             content: 'Erro ao gerar convite.',
             components: [],
-            embeds: [],
           });
         }
       }
     });
 
     collector.on('end', () => {
-      msg.edit({ components: [] }).catch(() => {});
+      msg
+        .edit({
+          components: [buildLabel(page).build()],
+          flags: MessageFlags.IsComponentsV2,
+        })
+        .catch(() => {});
     });
   },
 };

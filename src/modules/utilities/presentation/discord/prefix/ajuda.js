@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require('discord.js');
+const { MessageFlags } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   name: 'ajuda',
@@ -26,14 +27,16 @@ module.exports = {
           .slice(0, 1024),
       }))
       .slice(0, 25);
+
+    const label = new LabelBuilder()
+      .setColor(Colors.Blurple)
+      .setTitle('Comandos do Wardizitto')
+      .addFields(fields)
+      .setFooter('Prefira os comandos de barra para uma experiência completa.');
+
     return message.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#5865f2')
-          .setTitle('Comandos do Wardizitto')
-          .addFields(fields)
-          .setFooter({ text: 'Prefira os comandos de barra para uma experiência completa.' }),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

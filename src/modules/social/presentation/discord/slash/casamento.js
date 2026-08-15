@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,14 +18,16 @@ module.exports = {
       });
     }
     const partner = await interaction.client.users.fetch(marriage.partnerId);
+
+    const label = new LabelBuilder()
+      .setTitle('💜 Casamento')
+      .setDescription(`Você está casado com **${partner.tag}**.`)
+      .setColor(Colors.Purple)
+      .setFooter(`Desde ${new Date(marriage.createdAt).toLocaleDateString('pt-BR')}`);
+
     return interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('💜 Casamento')
-          .setDescription(`Você está casado com **${partner.tag}**.`)
-          .setColor('Purple')
-          .setFooter({ text: `Desde ${new Date(marriage.createdAt).toLocaleDateString('pt-BR')}` }),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

@@ -1,11 +1,11 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -43,22 +43,17 @@ module.exports = {
       });
     }
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle('🐞 Novo bug reportado')
-      .addFields(
-        {
-          name: '👤 Usuário',
-          value: `${interaction.user.tag} (\`${interaction.user.id}\`)`,
-        },
-        {
-          name: '🌐 Servidor',
-          value: `${interaction.guild?.name ?? 'DM'} (\`${interaction.guildId ?? 'DM'}\`)`,
-        },
-        { name: '📝 Descrição', value: description },
+      .addField('👤 Usuário', `${interaction.user.tag} (\`${interaction.user.id}\`)`)
+      .addField(
+        '🌐 Servidor',
+        `${interaction.guild?.name ?? 'DM'} (\`${interaction.guildId ?? 'DM'}\`)`,
       )
-      .setColor('Red')
+      .addField('📝 Descrição', description)
+      .setColor(Colors.Red)
       .setTimestamp();
-    if (image) embed.setImage(image.url);
+    if (image) label.setImage(image.url);
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -70,7 +65,10 @@ module.exports = {
         .setLabel('Resolver bug')
         .setStyle(ButtonStyle.Primary),
     );
-    await channel.send({ embeds: [embed], components: [row] });
+    await channel.send({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
     await interaction.reply({
       content: '✅ Seu relatório foi enviado para a equipe.',
       flags: MessageFlags.Ephemeral,

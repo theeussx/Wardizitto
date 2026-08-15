@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require('discord.js');
+const { MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   name: 'user-banner',
@@ -8,13 +9,15 @@ module.exports = {
     const user = await message.client.users.fetch(selected.id, { force: true });
     const banner = user.bannerURL({ extension: 'png', size: 1024 });
     if (!banner) return message.reply(`O usuário **${user.tag}** não possui banner.`);
+
+    const label = new LabelBuilder()
+      .setColor(user.accentColor ?? '#5865f2')
+      .setTitle(`Banner de ${user.username}`)
+      .setImage(banner);
+
     return message.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(user.accentColor ?? '#5865f2')
-          .setTitle(`Banner de ${user.username}`)
-          .setImage(banner),
-      ],
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 };

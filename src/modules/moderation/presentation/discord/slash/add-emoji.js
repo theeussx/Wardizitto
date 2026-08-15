@@ -1,4 +1,12 @@
-const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
+
+const ephemeralLabel = (description) =>
+  new LabelBuilder().setColor(Colors.Red).setDescription(description);
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,14 +25,19 @@ module.exports = {
     const nome = interaction.options.getString('nome');
     const imagem = interaction.options.getAttachment('imagem');
 
+    const sendEphemeral = (label) =>
+      interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
+
     // Verificação de permissão do membro
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageEmojisAndStickers)) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          '<:eg_cross:1353597108640415754> **Permissão insuficiente!**\nVocê precisa da permissão `Gerenciar Emojis e Figurinhas` para usar `/add-emoji`.',
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return sendEphemeral(
+        ephemeralLabel(
+          `${emoji('eg_cross')} **Permissão insuficiente!**\nVocê precisa da permissão \`Gerenciar Emojis e Figurinhas\` para usar \`/add-emoji\`.`,
+        ),
+      );
     }
 
     // Verificação de permissão do bot
@@ -33,78 +46,74 @@ module.exports = {
         PermissionsBitField.Flags.ManageEmojisAndStickers,
       )
     ) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          '<:eg_cross:1353597108640415754> **Permissão insuficiente (BOT)!**\nO bot precisa da permissão `Gerenciar Emojis e Figurinhas` para executar essa ação.',
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return sendEphemeral(
+        ephemeralLabel(
+          `${emoji('eg_cross')} **Permissão insuficiente (BOT)!**\nO bot precisa da permissão \`Gerenciar Emojis e Figurinhas\` para executar essa ação.`,
+        ),
+      );
     }
 
     // Verificação do nome do emoji
     const nomeValido = /^[\w]{2,32}$/.test(nome);
     if (!nomeValido) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          '<:eg_cross:1353597108640415754> **Nome inválido!**\nUse apenas letras, números e underline (`_`). Máximo 32 caracteres.',
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return sendEphemeral(
+        ephemeralLabel(
+          `${emoji('eg_cross')} **Nome inválido!**\nUse apenas letras, números e underline (\`_\`). Máximo 32 caracteres.`,
+        ),
+      );
     }
 
     // Verificação de duplicidade de nome
     const jaExiste = interaction.guild.emojis.cache.find((e) => e.name === nome);
     if (jaExiste) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          `<:eg_cross:1353597108640415754> Já existe um emoji com o nome \`${nome}\` neste servidor.`,
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return sendEphemeral(
+        ephemeralLabel(
+          `${emoji('eg_cross')} Já existe um emoji com o nome \`${nome}\` neste servidor.`,
+        ),
+      );
     }
 
     // Verificação se o arquivo é uma imagem
     if (!imagem.contentType?.startsWith('image/')) {
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(
-          '<:eg_cross:1353597108640415754> **Imagem inválida!**\nPor favor, envie um arquivo de imagem válido.',
-        );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return sendEphemeral(
+        ephemeralLabel(
+          `${emoji('eg_cross')} **Imagem inválida!**\nPor favor, envie um arquivo de imagem válido.`,
+        ),
+      );
     }
 
     try {
-      const emoji = await interaction.guild.emojis.create({
+      const emojiCriado = await interaction.guild.emojis.create({
         attachment: imagem.url,
         name: nome,
         reason: `Emoji adicionado por ${interaction.user.tag} via comando /add-emoji.`,
       });
 
-      const embed = new EmbedBuilder()
-        .setColor('Green')
-        .setTitle('<:icons_correct:1353597185542979664> Emoji adicionado com sucesso!')
-        .setDescription(`O emoji ${emoji} foi adicionado ao servidor com o nome \`${nome}\`.`)
+      const label = new LabelBuilder()
+        .setColor(Colors.Green)
+        .setTitle(`${emoji('icons_correct')} Emoji adicionado com sucesso!`)
+        .setDescription(`O emoji ${emojiCriado} foi adicionado ao servidor com o nome \`${nome}\`.`)
         .setThumbnail(imagem.url)
-        .setFooter({
-          text: `Comando executado por ${interaction.user.tag}`,
-          iconURL: interaction.user.displayAvatarURL(),
-        });
+        .setFooter(`Comando executado por ${interaction.user.tag}`);
 
-      return interaction.reply({ embeds: [embed] });
+      return interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
     } catch (error) {
       interaction.client.services.logger.error('Erro em handler de compatibilidade.', error);
-      const embed = new EmbedBuilder()
-        .setColor('Red')
-        .setTitle('<:eg_cross:1353597108640415754> Erro ao adicionar emoji')
+      const label = new LabelBuilder()
+        .setColor(Colors.Red)
+        .setTitle(`${emoji('eg_cross')} Erro ao adicionar emoji`)
         .setDescription(
           'O servidor pode ter atingido o limite de emojis ou ocorreu um erro inesperado.',
         )
-        .setFooter({
-          text: 'Erro no comando /add-emoji',
-          iconURL: interaction.client.user.displayAvatarURL(),
-        });
+        .setFooter('Erro no comando /add-emoji');
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({
+        components: [label.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+      });
     }
   },
 };

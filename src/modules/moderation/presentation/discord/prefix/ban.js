@@ -1,4 +1,4 @@
-const { MessageFlags, EmbedBuilder, ContainerBuilder, SeparatorBuilder } = require('discord.js');
+const { MessageFlags, ContainerBuilder, SeparatorBuilder } = require('discord.js');
 
 module.exports = {
   name: 'ban',

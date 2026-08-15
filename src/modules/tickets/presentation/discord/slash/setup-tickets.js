@@ -1,6 +1,5 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   PermissionFlagsBits,
   ActionRowBuilder,
   ButtonBuilder,
@@ -11,6 +10,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -27,32 +27,30 @@ module.exports = {
           [interaction.guildId],
         )
       )[0] || {};
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle('⚙️ Configuração de tickets')
       .setDescription('Configure cada item e, ao final, publique o painel.')
-      .addFields(
-        {
-          name: 'Categoria',
-          value: config.category_id ? `<#${config.category_id}>` : 'Não configurada',
-          inline: true,
-        },
-        {
-          name: 'Cargo de suporte',
-          value: config.support_role_id ? `<@&${config.support_role_id}>` : 'Não configurado',
-          inline: true,
-        },
-        {
-          name: 'Canal de logs',
-          value: config.logs_channel_id ? `<#${config.logs_channel_id}>` : 'Não configurado',
-          inline: true,
-        },
-        {
-          name: 'Canal do painel',
-          value: config.panel_channel_id ? `<#${config.panel_channel_id}>` : 'Não configurado',
-          inline: true,
-        },
+      .addField(
+        'Categoria',
+        config.category_id ? `<#${config.category_id}>` : 'Não configurada',
+        true,
       )
-      .setColor('#5865f2');
+      .addField(
+        'Cargo de suporte',
+        config.support_role_id ? `<@&${config.support_role_id}>` : 'Não configurado',
+        true,
+      )
+      .addField(
+        'Canal de logs',
+        config.logs_channel_id ? `<#${config.logs_channel_id}>` : 'Não configurado',
+        true,
+      )
+      .addField(
+        'Canal do painel',
+        config.panel_channel_id ? `<#${config.panel_channel_id}>` : 'Não configurado',
+        true,
+      )
+      .setColor(Colors.Blurple);
     const category = new ActionRowBuilder().addComponents(
       new ChannelSelectMenuBuilder()
         .setCustomId('select_ticket_category')
@@ -88,9 +86,8 @@ module.exports = {
         .setDisabled(!(config.category_id && config.support_role_id && config.panel_channel_id)),
     );
     await interaction.reply({
-      embeds: [embed],
-      components: [category, logs, panel, role, actions],
-      flags: MessageFlags.Ephemeral,
+      components: [label.build(), category, logs, panel, role, actions],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

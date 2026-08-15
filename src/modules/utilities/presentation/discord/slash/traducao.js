@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const iso6391 = require('iso-639-1');
 const { truncateUserContent } = require('../../../../../core/security/content.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -83,15 +84,18 @@ module.exports = {
       });
     }
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle('🌐 Traduções')
-      .setColor('#1abc9c')
+      .setColor(Colors.Teal)
       .addFields(
         translations.map(({ language, value }) => ({
           name: `${iso6391.getName(language) || language} (${language.toUpperCase()})`,
           value,
         })),
       );
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

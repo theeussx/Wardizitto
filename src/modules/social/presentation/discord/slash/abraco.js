@@ -1,16 +1,11 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } = require('discord.js');
-
-// Emojis personalizados
-const emojis = {
-  heart: '<:eg_heart:1353597127091294208>',
-  retribuir: '<:icons_heart:1353597437922775082>',
-};
+const { LabelBuilder, emoji } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -62,9 +57,9 @@ module.exports = {
       });
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle(`${emojis.heart} Abraço Recebido!`)
-      .setDescription(`${interaction.user} deu um abraço em ${user}! ${emojis.heart}`)
+    const label = new LabelBuilder()
+      .setTitle(`${emoji('eg_heart')} Abraço Recebido!`)
+      .setDescription(`${interaction.user} deu um abraço em ${user}! ${emoji('eg_heart')}`)
       .setImage(imagem)
       .setColor('#FFC0CB')
       .setTimestamp();
@@ -72,12 +67,15 @@ module.exports = {
     const button = new ButtonBuilder()
       .setCustomId('retribuir_abraço')
       .setLabel('Retribuir Abraço')
-      .setEmoji(emojis.retribuir)
+      .setEmoji(emoji('icons_heart'))
       .setStyle(ButtonStyle.Primary);
 
     const row = new ActionRowBuilder().addComponents(button);
 
-    const message = await interaction.editReply({ embeds: [embed], components: [row] });
+    const message = await interaction.editReply({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
 
     const filter = (i) => i.customId === 'retribuir_abraço' && i.message.id === message.id;
     const collector = message.createMessageComponentCollector({ filter, time: 30000, max: 1 });
@@ -100,9 +98,9 @@ module.exports = {
         });
       }
 
-      const returnEmbed = new EmbedBuilder()
-        .setTitle(`${emojis.heart} Retribuição de Abraço`)
-        .setDescription(`${user} retribuiu o abraço de ${interaction.user}! ${emojis.heart}`)
+      const returnLabel = new LabelBuilder()
+        .setTitle(`${emoji('eg_heart')} Retribuição de Abraço`)
+        .setDescription(`${user} retribuiu o abraço de ${interaction.user}! ${emoji('eg_heart')}`)
         .setImage(novaImagem)
         .setColor('#FF69B4')
         .setTimestamp();
@@ -111,7 +109,10 @@ module.exports = {
         ButtonBuilder.from(button).setDisabled(true),
       );
 
-      await i.update({ embeds: [returnEmbed], components: [disabledRow] });
+      await i.update({
+        components: [returnLabel.build(), disabledRow],
+        flags: MessageFlags.IsComponentsV2,
+      });
     });
 
     collector.on('end', (collected) => {
@@ -119,7 +120,12 @@ module.exports = {
         const disabledRow = new ActionRowBuilder().addComponents(
           ButtonBuilder.from(button).setDisabled(true),
         );
-        message.edit({ components: [disabledRow] }).catch(() => {});
+        message
+          .edit({
+            components: [label.build(), disabledRow],
+            flags: MessageFlags.IsComponentsV2,
+          })
+          .catch(() => {});
       }
     });
   },

@@ -1,6 +1,28 @@
-const { EmbedBuilder, MessageFlags } = require('discord.js');
+const { MessageFlags } = require('discord.js');
 const { isOwner } = require('../../../../../core/security/owner.js');
 const { query } = require('../../../../../infrastructure/database/legacy.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
+
+// Extrai descrição, imagem e campos de um container V2 de fanart.
+const parseFanart = (message) => {
+  const container = message?.components?.[0]?.toJSON?.() ?? message?.components?.[0];
+  const texts = [];
+  let imageUrl = '';
+  let authorField = '';
+  const walk = (node) => {
+    if (!node) return;
+    if (node.type === 10) {
+      const content = node.content;
+      if (content.startsWith('**Autor**')) authorField = content;
+      else if (!content.startsWith('## ') && !content.startsWith('-# ')) texts.push(content);
+    }
+    if (node.type === 12 && node.items?.[0]?.media?.url) imageUrl = node.items[0].media.url;
+    for (const child of node.components || []) walk(child);
+    for (const item of node.items || []) walk(item);
+  };
+  walk(container);
+  return { description: texts[0] || '', imageUrl, authorField };
+};
 
 module.exports = {
   async execute(interaction) {
@@ -13,13 +35,29 @@ module.exports = {
     }
 
     const authorId = interaction.customId.split('_')[2];
-    if (!authorId || !/^\d{17,20}$/.test(authorId) || interaction.message.embeds.length === 0) {
+    if (!authorId || !/^\d{17,20}$/.test(authorId)) {
       return interaction.reply({
         content: '❌ A solicitação de revisão é inválida.',
         flags: MessageFlags.Ephemeral,
       });
     }
-    const embed = EmbedBuilder.from(interaction.message.embeds[0]);
+    const parsed = parseFanart(interaction.message);
+    if (!parsed.description) {
+      return interaction.reply({
+        content: '❌ A solicitação de revisão é inválida.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const buildLabel = (color, title) => {
+      const label = new LabelBuilder()
+        .setColor(color)
+        .setTitle(title)
+        .setDescription(parsed.description);
+      if (parsed.authorField) label.addText(parsed.authorField);
+      if (parsed.imageUrl) label.setImage(parsed.imageUrl);
+      return label;
+    };
 
     if (approve) {
       const channelId = interaction.client.services.config.FAN_ART_PUBLIC_CHANNEL_ID;
@@ -32,16 +70,23 @@ module.exports = {
           flags: MessageFlags.Ephemeral,
         });
       }
-      embed.setColor('Green').setTitle('🎉 Fanart aprovada');
-      await channel.send({ embeds: [embed] });
-      await interaction.message.edit({ embeds: [embed], components: [] });
+      const label = buildLabel(Colors.Green, '🎉 Fanart aprovada');
+      await channel.send({
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
+      await interaction.message.edit({
+        components: [label.build()],
+        flags: MessageFlags.IsComponentsV2,
+      });
       return interaction.reply({
         content: '✅ Fanart aprovada e publicada.',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    embed.setColor('Red').addFields({ name: 'Status', value: 'Fanart rejeitada.' });
+    const label = buildLabel(Colors.Red, '🎨 Fanart');
+    label.addField('Status', 'Fanart rejeitada.');
     await query(
       `INSERT INTO avisos (guild_id, user_id, quantidade)
        VALUES (?, ?, 1)
@@ -50,7 +95,10 @@ module.exports = {
     );
     const author = await interaction.client.users.fetch(authorId).catch(() => undefined);
     await author?.send('Sua fanart foi rejeitada pela equipe de revisão.').catch(() => undefined);
-    await interaction.message.edit({ embeds: [embed], components: [] });
+    await interaction.message.edit({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
     return interaction.reply({
       content: '🚫 Fanart rejeitada.',
       flags: MessageFlags.Ephemeral,

@@ -1,11 +1,12 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionsBitField,
+  MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,26 +17,22 @@ module.exports = {
 
   async execute(interaction) {
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+      const denyLabel = new LabelBuilder()
+        .setColor(Colors.Red)
+        .setDescription(
+          '❌ Você precisa da permissão `Gerenciar Mensagens` para usar este comando.',
+        );
       return interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Red')
-            .setDescription(
-              '❌ Você precisa da permissão `Gerenciar Mensagens` para usar este comando.',
-            ),
-        ],
-        ephemeral: true,
+        components: [denyLabel.build()],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     }
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle('📢 Título do Comunicado')
       .setDescription('Aqui está o conteúdo do comunicado. Você pode editar antes de enviar.')
       .setColor('#5865F2')
-      .setFooter({
-        text: `Enviado por ${interaction.user.tag}`,
-        iconURL: interaction.user.displayAvatarURL({ dynamic: true }),
-      })
+      .setFooter(`Enviado por ${interaction.user.tag}`)
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
@@ -56,6 +53,9 @@ module.exports = {
     );
 
     await interaction.deferReply();
-    await interaction.editReply({ embeds: [embed], components: [row] });
+    await interaction.editReply({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

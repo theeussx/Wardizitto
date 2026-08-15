@@ -3,9 +3,13 @@ const {
   SlashCommandBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  EmbedBuilder,
+  MessageFlags,
 } = require('discord.js');
-const { static: emojis } = require('../../../../../core/config/emojis.json'); // Ajuste o caminho conforme a estrutura do seu projeto
+const {
+  LabelBuilder,
+  Colors,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,7 +19,7 @@ module.exports = {
   async execute(interaction) {
     if (!isOwner(interaction.user.id)) {
       return interaction.reply({
-        content: `<:icons_wrong:${emojis.icons_wrong}> Apenas o dono do bot pode usar este comando.`,
+        content: `${emoji('icons_wrong')} Apenas o dono do bot pode usar este comando.`,
         ephemeral: true,
       });
     }
@@ -30,7 +34,7 @@ module.exports = {
 
     if (guilds.length === 0) {
       return interaction.reply({
-        content: `<:icons_wrong:${emojis.icons_wrong}> O bot não está em nenhum servidor.`,
+        content: `${emoji('icons_wrong')} O bot não está em nenhum servidor.`,
         ephemeral: true,
       });
     }
@@ -42,18 +46,15 @@ module.exports = {
 
     const row = new ActionRowBuilder().addComponents(selectMenu);
 
-    const embed = new EmbedBuilder()
-      .setColor(0x5865f2)
+    const label = new LabelBuilder()
+      .setColor(Colors.Blurple)
       .setTitle('Envio de Mensagem')
-      .setDescription(
-        `<:icons_message:${emojis.icons_message}> Escolha o servidor onde deseja enviar a mensagem.`,
-      )
-      .setFooter({ text: 'MightWard Bot', iconURL: interaction.client.user.displayAvatarURL() });
+      .setDescription(`${emoji('icons_message')} Escolha o servidor onde deseja enviar a mensagem.`)
+      .setFooter('MightWard Bot');
 
     await interaction.reply({
-      embeds: [embed],
-      components: [row],
-      ephemeral: true,
+      components: [label.build(), row],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

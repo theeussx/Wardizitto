@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require('discord.js');
+const { MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   name: 'userinfo',
@@ -7,36 +8,27 @@ module.exports = {
     const target = message.mentions.members.first() || message.member;
     const user = target.user;
 
-    const embed = new EmbedBuilder()
-      .setAuthor({ name: `Informações de ${user.username}`, iconURL: user.displayAvatarURL() })
+    const label = new LabelBuilder()
+      .setAuthor(`Informações de ${user.username}`, user.displayAvatarURL())
       .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
       .setColor(target.displayHexColor || '#5865F2')
-      .addFields(
-        { name: '👤 Tag', value: `\`${user.tag}\``, inline: true },
-        { name: '🆔 ID', value: `\`${user.id}\``, inline: true },
-        {
-          name: '📅 Conta Criada',
-          value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
-          inline: true,
-        },
-        {
-          name: '📥 Entrou no Servidor',
-          value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:R>`,
-          inline: true,
-        },
-        {
-          name: '🎭 Cargos',
-          value:
-            target.roles.cache
-              .filter((r) => r.id !== message.guild.id)
-              .map((r) => r)
-              .join(' ') || 'Nenhum',
-          inline: false,
-        },
+      .addField('👤 Tag', `\`${user.tag}\``, true)
+      .addField('🆔 ID', `\`${user.id}\``, true)
+      .addField('📅 Conta Criada', `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, true)
+      .addField('📥 Entrou no Servidor', `<t:${Math.floor(target.joinedTimestamp / 1000)}:R>`, true)
+      .addField(
+        '🎭 Cargos',
+        target.roles.cache
+          .filter((r) => r.id !== message.guild.id)
+          .map((r) => r)
+          .join(' ') || 'Nenhum',
       )
-      .setFooter({ text: `Requisitado por ${message.author.username}` })
+      .setFooter(`Requisitado por ${message.author.username}`)
       .setTimestamp();
 
-    message.reply({ embeds: [embed] });
+    message.reply({
+      components: [label.build()],
+      flags: MessageFlags.IsComponentsV2,
+    });
   },
 };

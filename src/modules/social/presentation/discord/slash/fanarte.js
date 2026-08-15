@@ -1,11 +1,11 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
 } = require('discord.js');
+const { LabelBuilder, Colors } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -46,12 +46,12 @@ module.exports = {
       });
     }
 
-    const embed = new EmbedBuilder()
+    const label = new LabelBuilder()
       .setTitle('🎨 Nova fanart')
       .setDescription(description)
       .setImage(image.url)
-      .addFields({ name: 'Autor', value: `<@${interaction.user.id}> (\`${interaction.user.id}\`)` })
-      .setColor('Purple')
+      .addField('Autor', `<@${interaction.user.id}> (\`${interaction.user.id}\`)`)
+      .setColor(Colors.Purple)
       .setTimestamp();
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -63,7 +63,10 @@ module.exports = {
         .setLabel('Rejeitar')
         .setStyle(ButtonStyle.Danger),
     );
-    await channel.send({ embeds: [embed], components: [row] });
+    await channel.send({
+      components: [label.build(), row],
+      flags: MessageFlags.IsComponentsV2,
+    });
     await interaction.reply({
       content: '✅ Sua fanart foi enviada para revisão.',
       flags: MessageFlags.Ephemeral,

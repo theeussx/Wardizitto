@@ -1,14 +1,16 @@
 const {
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  TextInputBuilder,
   TextInputStyle,
-  ModalBuilder,
   ChannelType,
-  EmbedBuilder,
+  MessageFlags,
 } = require('discord.js');
-
-const { static: emojis } = require('../../../../../core/config/emojis.json'); // Corrija conforme sua estrutura real
+const {
+  LabelBuilder,
+  Colors,
+  createModal,
+  emoji,
+} = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   name: 'canalenv',
@@ -22,16 +24,12 @@ module.exports = {
           const guild = interaction.client.guilds.cache.get(selectedGuildId);
 
           if (!guild) {
+            const label = new LabelBuilder()
+              .setColor(Colors.Red)
+              .setDescription(`${emoji('icons_wrong')} **Servidor não encontrado.**`);
             return interaction.update({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Red')
-                  .setDescription(
-                    `<:icons_wrong:${emojis.icons_wrong}> **Servidor não encontrado.**`,
-                  ),
-              ],
-              components: [],
-              ephemeral: true,
+              components: [label.build()],
+              flags: MessageFlags.IsComponentsV2,
             });
           }
 
@@ -41,16 +39,14 @@ module.exports = {
             .slice(0, 25);
 
           if (canaisTexto.length === 0) {
+            const label = new LabelBuilder()
+              .setColor('Yellow')
+              .setDescription(
+                `${emoji('icons_warning')} **Nenhum canal de texto disponível neste servidor.**`,
+              );
             return interaction.update({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Yellow')
-                  .setDescription(
-                    `<:icons_warning:${emojis.icons_warning}> **Nenhum canal de texto disponível neste servidor.**`,
-                  ),
-              ],
-              components: [],
-              ephemeral: true,
+              components: [label.build()],
+              flags: MessageFlags.IsComponentsV2,
             });
           }
 
@@ -61,16 +57,15 @@ module.exports = {
 
           const row = new ActionRowBuilder().addComponents(canalSelect);
 
+          const label = new LabelBuilder()
+            .setColor(Colors.Blue)
+            .setDescription(
+              `${emoji('icons_channel')} Servidor selecionado: **${guild.name}**\nAgora escolha o canal:`,
+            );
+
           return interaction.update({
-            embeds: [
-              new EmbedBuilder()
-                .setColor('Blue')
-                .setDescription(
-                  `<:icons_channel:${emojis.icons_channel}> Servidor selecionado: **${guild.name}**\nAgora escolha o canal:`,
-                ),
-            ],
-            components: [row],
-            ephemeral: true,
+            components: [label.build(), row],
+            flags: MessageFlags.IsComponentsV2,
           });
         }
 
@@ -81,32 +76,28 @@ module.exports = {
           const canal = guild?.channels.cache.get(channelId);
 
           if (!canal || !canal.viewable || canal.type !== ChannelType.GuildText) {
+            const label = new LabelBuilder()
+              .setColor(Colors.Red)
+              .setDescription(`${emoji('icons_wrong')} **Canal inválido ou inacessível.**`);
             return interaction.update({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Red')
-                  .setDescription(
-                    `<:icons_wrong:${emojis.icons_wrong}> **Canal inválido ou inacessível.**`,
-                  ),
-              ],
-              components: [],
-              ephemeral: true,
+              components: [label.build()],
+              flags: MessageFlags.IsComponentsV2,
             });
           }
 
-          const modal = new ModalBuilder()
-            .setCustomId(`enviar_mensagem_modal-${guildId}-${channelId}`) // Usando hífens para melhor parse
-            .setTitle('Mensagem Personalizada')
-            .addComponents(
-              new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                  .setCustomId('mensagem_conteudo')
-                  .setLabel('Escreva a mensagem que será enviada')
-                  .setStyle(TextInputStyle.Paragraph)
-                  .setMaxLength(2000)
-                  .setRequired(true),
-              ),
-            );
+          const modal = createModal({
+            customId: `enviar_mensagem_modal-${guildId}-${channelId}`, // Usando hífens para melhor parse
+            title: 'Mensagem Personalizada',
+            fields: [
+              {
+                customId: 'mensagem_conteudo',
+                label: 'Escreva a mensagem que será enviada',
+                style: TextInputStyle.Paragraph,
+                maxLength: 2000,
+                required: true,
+              },
+            ],
+          });
 
           return interaction.showModal(modal);
         }
@@ -122,15 +113,14 @@ module.exports = {
         const canal = guild?.channels.cache.get(channelId);
 
         if (!canal || !canal.viewable || canal.type !== ChannelType.GuildText) {
+          const label = new LabelBuilder()
+            .setColor(Colors.Red)
+            .setDescription(
+              `${emoji('icons_wrong')} **Não foi possível encontrar o canal selecionado.**`,
+            );
           return interaction.reply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor('Red')
-                .setDescription(
-                  `<:icons_wrong:${emojis.icons_wrong}> **Não foi possível encontrar o canal selecionado.**`,
-                ),
-            ],
-            ephemeral: true,
+            components: [label.build()],
+            flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
           });
         }
 
@@ -138,28 +128,34 @@ module.exports = {
 
         await canal.send({ content: conteudo });
 
+        const label = new LabelBuilder()
+          .setColor(Colors.Green)
+          .setDescription(
+            `${emoji('icons_correct')} **Mensagem enviada com sucesso em**\n**${guild.name}** → **#${canal.name}**.`,
+          );
+
         await interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor('Green')
-              .setDescription(
-                `<:icons_correct:${emojis.icons_correct}> **Mensagem enviada com sucesso em**\n**${guild.name}** → **#${canal.name}**.`,
-              ),
-          ],
-          ephemeral: true,
+          components: [label.build()],
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
         });
       }
     } catch (error) {
       interaction.client.services.logger.error('Erro no canalenv.js:', error);
 
-      const errorEmbed = new EmbedBuilder()
-        .setColor('Red')
-        .setDescription(`<:icons_wrong:${emojis.icons_wrong}> **Ocorreu um erro inesperado.**`);
+      const errorLabel = new LabelBuilder()
+        .setColor(Colors.Red)
+        .setDescription(`${emoji('icons_wrong')} **Ocorreu um erro inesperado.**`);
 
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.followUp({
+          components: [errorLabel.build()],
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+        await interaction.reply({
+          components: [errorLabel.build()],
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
       }
     }
   },

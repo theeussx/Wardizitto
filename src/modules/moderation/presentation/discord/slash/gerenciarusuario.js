@@ -1,12 +1,12 @@
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   PermissionFlagsBits,
   MessageFlags,
 } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -64,16 +64,16 @@ module.exports = {
         .setLabel('Banir')
         .setStyle(ButtonStyle.Danger),
     );
+
+    const label = new LabelBuilder()
+      .setColor('#5865f2')
+      .setTitle('Gerenciar membro')
+      .setDescription(`Selecione uma ação para ${target}.`)
+      .setThumbnail(target.displayAvatarURL());
+
     await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#5865f2')
-          .setTitle('Gerenciar membro')
-          .setDescription(`Selecione uma ação para ${target}.`)
-          .setThumbnail(target.displayAvatarURL()),
-      ],
-      components: [firstRow, secondRow],
-      flags: MessageFlags.Ephemeral,
+      components: [label.build(), firstRow, secondRow],
+      flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
   },
 };

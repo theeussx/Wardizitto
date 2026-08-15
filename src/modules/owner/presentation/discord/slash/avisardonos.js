@@ -1,5 +1,17 @@
 const { isOwner } = require('../../../../../core/security/owner.js');
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { LabelBuilder } = require('../../../../../presentation/discord/ui/components-v2.js');
+
+const buildLabel = (titulo, descricao, cor, imagem) => {
+  const label = new LabelBuilder()
+    .setTitle(titulo)
+    .setDescription(descricao)
+    .setColor(cor)
+    .setFooter('MightWard - Aviso oficial')
+    .setTimestamp();
+  if (imagem) label.setImage(imagem);
+  return label;
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -34,15 +46,7 @@ module.exports = {
     const descricao = interaction.options.getString('descricao');
     const corHex = interaction.options.getString('cor') || '#f1c40f';
     const imagem = interaction.options.getString('imagem');
-
-    const embed = new EmbedBuilder()
-      .setTitle(titulo)
-      .setDescription(descricao)
-      .setColor(corHex.replace('#', ''))
-      .setFooter({ text: 'MightWard - Aviso oficial' })
-      .setTimestamp();
-
-    if (imagem) embed.setImage(imagem);
+    const cor = corHex.startsWith('#') ? corHex : `#${corHex}`;
 
     const servidores = client.guilds.cache;
     let enviados = 0;
@@ -53,10 +57,13 @@ module.exports = {
       ephemeral: true,
     });
 
-    for (const [_, guild] of servidores) {
+    for (const [, guild] of servidores) {
       try {
         const owner = await guild.fetchOwner();
-        await owner.send({ embeds: [embed] });
+        await owner.send({
+          components: [buildLabel(titulo, descricao, cor, imagem).build()],
+          flags: MessageFlags.IsComponentsV2,
+        });
         enviados++;
       } catch {
         const canal = guild.channels.cache.find(
@@ -65,9 +72,15 @@ module.exports = {
         );
         try {
           if (canal) {
+            const label = buildLabel(
+              titulo,
+              `📢 **Mensagem para o dono (<@${guild.ownerId}>):**\n\n${descricao}`,
+              cor,
+              imagem,
+            );
             await canal.send({
-              content: `📢 **Mensagem para o dono (<@${guild.ownerId}>):**`,
-              embeds: [embed],
+              components: [label.build()],
+              flags: MessageFlags.IsComponentsV2,
             });
             enviados++;
           } else {
