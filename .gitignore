@@ -1,7 +1,6 @@
 node_modules
 .vscode
 ultimo_servidor.json
-package-lock.json
 Wardizitto.session.sql
 Wardizitto_dev.session.sql
 .DS_Store
@@ -36,3 +35,6 @@ out/
 *.tgz
 *.zip
 *.tar.gz
+
+# Keep versioned database migrations while ignoring local SQL dumps.
+!src/infrastructure/database/migrations/*.sql
