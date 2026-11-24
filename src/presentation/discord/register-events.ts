@@ -7,36 +7,53 @@ import type { DiscordLifecycleService } from './services/discord-lifecycle-servi
 
 export const registerDiscordEvents = (
   client: WardizittoClient,
-  interactionRouter: InteractionRouter,
-  messageRouter: MessageRouter,
-  lifecycle: DiscordLifecycleService,
-): void => {
-  const safely = (event: string, work: Promise<void>): void => {
-    void work.catch((error: unknown) =>
-      client.services.logger.error(
-        'Falha não tratada em evento Discord.',
-        error,
-        { event },
-        'discord',
-      ),
-    );
+  interactionRouter: Pick<InteractionRouter, 'handle'>,
+  messageRouter: Pick<MessageRouter, 'handle'>,
+  lifecycle: Pick<
+    DiscordLifecycleService,
+    'ready' | 'guildCreated' | 'guildDeleted' | 'memberChanged'
+  >,
+): (() => Promise<void>) => {
+  let accepting = true;
+  const pending = new Set<Promise<void>>();
+  const safely = (event: string, work: () => Promise<void>): void => {
+    if (!accepting) return;
+    const task = Promise.resolve()
+      .then(work)
+      .catch((error: unknown) => {
+        client.services.logger.error(
+          'Falha não tratada em evento Discord.',
+          error,
+          { event },
+          'discord',
+        );
+      });
+    pending.add(task);
+    const removeTask = (): void => {
+      pending.delete(task);
+    };
+    void task.then(removeTask, removeTask);
   };
 
-  client.once(Events.ClientReady, () => safely(Events.ClientReady, lifecycle.ready()));
+  client.once(Events.ClientReady, () => safely(Events.ClientReady, () => lifecycle.ready()));
   client.on(Events.InteractionCreate, (interaction) =>
-    safely(Events.InteractionCreate, interactionRouter.handle(interaction)),
+    safely(Events.InteractionCreate, () => interactionRouter.handle(interaction)),
   );
   client.on(Events.MessageCreate, (message) =>
-    safely(Events.MessageCreate, messageRouter.handle(message)),
+    safely(Events.MessageCreate, () => messageRouter.handle(message)),
   );
   client.on(Events.GuildCreate, (guild) =>
-    safely(Events.GuildCreate, lifecycle.guildCreated(guild)),
+    safely(Events.GuildCreate, () => lifecycle.guildCreated(guild)),
   );
   client.on(Events.GuildDelete, (guild) =>
-    safely(Events.GuildDelete, lifecycle.guildDeleted(guild)),
+    safely(Events.GuildDelete, () => lifecycle.guildDeleted(guild)),
   );
-  client.on(Events.GuildMemberAdd, (member) => lifecycle.memberChanged(member));
-  client.on(Events.GuildMemberRemove, (member) => lifecycle.memberChanged(member));
+  client.on(Events.GuildMemberAdd, (member) => {
+    if (accepting) lifecycle.memberChanged(member);
+  });
+  client.on(Events.GuildMemberRemove, (member) => {
+    if (accepting) lifecycle.memberChanged(member);
+  });
 
   client.on(Events.Error, (error) =>
     client.services.logger.error('Erro do cliente Discord.', error),
@@ -47,4 +64,8 @@ export const registerDiscordEvents = (
   client.on(Events.ShardError, (error, shardId) =>
     client.services.logger.error('Erro de shard Discord.', error, { shardId }, 'discord'),
   );
+  return async () => {
+    accepting = false;
+    await Promise.allSettled(pending);
+  };
 };

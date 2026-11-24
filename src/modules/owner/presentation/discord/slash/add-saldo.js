@@ -27,6 +27,7 @@ module.exports = {
       target.id,
       amount,
       'wallet',
+      interaction.id,
     );
     interaction.client.services.logger.audit('Saldo administrativo adicionado.', {
       actorId: interaction.user.id,

@@ -58,9 +58,13 @@ export const isPrivateAddress = (address: string): boolean => {
   return true;
 };
 
-const readLimitedBody = async (response: Response, maxBytes: number): Promise<Uint8Array> => {
+export const readLimitedBody = async (
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array> => {
   const declaredSize = Number(response.headers.get('content-length') ?? 0);
   if (declaredSize > maxBytes) {
+    await response.body?.cancel();
     throw new ValidationError('A resposta remota excede o tamanho permitido.', {
       maxBytes,
       declaredSize,

@@ -1,6 +1,9 @@
 import type { Interaction } from 'discord.js';
 
 import { ConfigurationError } from '../../../core/errors/app-error.js';
+import { configurationRoute } from '../../../modules/configuration/presentation/discord/components/configuration.js';
+import * as ticket from '../../../modules/tickets/presentation/discord/components/ticket.js';
+import * as verification from '../../../modules/verification/presentation/discord/components/verification.js';
 import type { WardizittoClient } from '../client/wardizitto-client.js';
 
 const announcement =
@@ -11,8 +14,6 @@ const ownerChannelMessage =
   require('../../../modules/owner/presentation/discord/components/channel-message.js') as LegacyHandler;
 const leaveGuild =
   require('../../../modules/owner/presentation/discord/components/leave-guild.js') as LegacyHandler;
-const ticket =
-  require('../../../modules/tickets/presentation/discord/components/ticket.js') as LegacyHandler;
 const economy =
   require('../../../modules/economy/presentation/discord/components/economy.js') as LegacyHandler;
 const profession =
@@ -23,8 +24,6 @@ const bugReport =
   require('../../../modules/utilities/presentation/discord/components/bug-report.js') as LegacyHandler;
 const githubRepository =
   require('../../../modules/utilities/presentation/discord/components/github-repository.js') as LegacyHandler;
-const verification =
-  require('../../../modules/verification/presentation/discord/components/verification.js') as LegacyHandler;
 
 interface LegacyHandler {
   execute(interaction: Interaction, client?: WardizittoClient): Promise<unknown>;
@@ -60,6 +59,7 @@ const legacyRoute = (
 
 export class ComponentRegistry {
   private readonly routes: readonly ComponentRoute[] = [
+    configurationRoute,
     legacyRoute(
       'tickets',
       ticket,
@@ -84,7 +84,11 @@ export class ComponentRegistry {
         /^(inventory|badges)_/u.test(id),
     ),
     legacyRoute('profession', profession, exact(['selecionar_profissao'])),
-    legacyRoute('verification', verification, exact(['verify_button', 'verificar_button'])),
+    legacyRoute(
+      'verification',
+      verification,
+      exact(['verify_button', 'verificar_button', 'verify:v1']),
+    ),
     legacyRoute('github-repository', githubRepository, prefix(['github_select_'])),
     legacyRoute(
       'announcement',

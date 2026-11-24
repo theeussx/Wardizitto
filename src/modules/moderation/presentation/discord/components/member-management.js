@@ -7,7 +7,8 @@ const {
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
-const { query } = require('../../../../../infrastructure/database/legacy.js');
+const query = (...args) =>
+  require('../../../../../infrastructure/database/legacy.js').query(...args);
 
 const ephemeral = (content) => ({ content, flags: MessageFlags.Ephemeral });
 const canModerate = (interaction) =>
@@ -33,7 +34,13 @@ const durationMs = (value) => {
 
 const assertTarget = async (interaction, userId) => {
   const target = await interaction.guild.members.fetch(userId).catch(() => undefined);
-  if (!target || target.user.bot || target.id === interaction.user.id) return undefined;
+  if (
+    !target ||
+    target.user.bot ||
+    target.id === interaction.user.id ||
+    target.id === interaction.guild.ownerId
+  )
+    return undefined;
   if (
     interaction.guild.ownerId !== interaction.user.id &&
     target.roles.highest.position >= interaction.member.roles.highest.position
@@ -142,28 +149,36 @@ module.exports = {
     if (!target)
       return interaction.reply(ephemeral('❌ Este membro não pode ser moderado por você.'));
     const reason = interaction.fields.getTextInputValue('reason').trim();
+    if (!reason) return interaction.reply(ephemeral('❌ Informe um motivo válido.'));
+    const auditReason = `${reason} · por ${interaction.user.tag}`.slice(0, 512);
 
     if (action === 'warn') {
+      if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
+        return interaction.reply(ephemeral('❌ É necessário Gerenciar Mensagens.'));
+      }
       await query(
         'INSERT INTO warns (guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
         [interaction.guildId, userId, interaction.user.id, reason],
       );
     } else if (action === 'timeout') {
+      if (!interaction.memberPermissions.has(PermissionFlagsBits.ModerateMembers)) {
+        return interaction.reply(ephemeral('❌ É necessário Moderar Membros.'));
+      }
       const duration = durationMs(interaction.fields.getTextInputValue('duration'));
       if (!duration) return interaction.reply(ephemeral('❌ Duração inválida. Use até 28d.'));
       if (!target.moderatable)
         return interaction.reply(ephemeral('❌ O bot não pode castigar este membro.'));
-      await target.timeout(duration, `${reason} · por ${interaction.user.tag}`);
+      await target.timeout(duration, auditReason);
     } else if (action === 'kick') {
       if (!interaction.memberPermissions.has(PermissionFlagsBits.KickMembers) || !target.kickable) {
         return interaction.reply(ephemeral('❌ Sem permissão para expulsar este membro.'));
       }
-      await target.kick(`${reason} · por ${interaction.user.tag}`);
+      await target.kick(auditReason);
     } else {
       if (!interaction.memberPermissions.has(PermissionFlagsBits.BanMembers) || !target.bannable) {
         return interaction.reply(ephemeral('❌ Sem permissão para banir este membro.'));
       }
-      await target.ban({ reason: `${reason} · por ${interaction.user.tag}` });
+      await target.ban({ reason: auditReason });
     }
 
     interaction.client.services.logger.audit('Ação de moderação executada.', {

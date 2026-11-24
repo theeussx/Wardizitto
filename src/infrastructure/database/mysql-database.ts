@@ -13,23 +13,12 @@ import type {
 } from '../../application/ports/database.js';
 import type { AppLogger } from '../../application/ports/logger.js';
 import type { AppConfig } from '../../core/config/environment.js';
-import { DatabaseError } from '../../core/errors/app-error.js';
-
-const transientCodes = new Set([
-  'PROTOCOL_CONNECTION_LOST',
-  'ECONNRESET',
-  'ETIMEDOUT',
-  'ER_LOCK_DEADLOCK',
-  'ER_LOCK_WAIT_TIMEOUT',
-]);
+import { AppError, DatabaseError } from '../../core/errors/app-error.js';
 
 const errorCode = (error: unknown): string | undefined => {
   if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
   return typeof error.code === 'string' ? error.code : undefined;
 };
-
-const wait = async (durationMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, durationMs));
 
 export class MySqlDatabase implements Database {
   private readonly pool: Pool;
@@ -77,7 +66,7 @@ export class MySqlDatabase implements Database {
     sql: string,
     parameters: readonly DatabaseValue[] = [],
   ): Promise<T> {
-    const [result] = await this.executeWithRetry<T>(sql, parameters);
+    const [result] = await this.execute<T>(sql, parameters);
     return result;
   }
 
@@ -85,30 +74,40 @@ export class MySqlDatabase implements Database {
     sql: string,
     parameters: readonly DatabaseValue[] = [],
   ): Promise<readonly [T, unknown]> {
-    return this.executeWithRetry<T>(sql, parameters);
+    return this.execute<T>(sql, parameters);
   }
 
   public async transaction<T>(work: (context: TransactionContext) => Promise<T>): Promise<T> {
     const connection = await this.pool.getConnection();
-    await connection.beginTransaction();
+    let reusable = false;
     try {
+      await connection.beginTransaction();
       const context: TransactionContext = {
         query: async <R extends QueryResult>(
           sql: string,
           parameters: readonly DatabaseValue[] = [],
         ) => {
-          const [result] = await connection.execute(sql, [...parameters]);
-          return result as R;
+          const [result] = await connection.execute<R>(sql, [...parameters]);
+          return result;
         },
       };
-      const result = await work(context);
+      let result: T;
+      try {
+        result = await work(context);
+      } catch (error) {
+        await connection.rollback();
+        reusable = true;
+        throw error;
+      }
       await connection.commit();
+      reusable = true;
       return result;
     } catch (error) {
-      await connection.rollback();
-      throw new DatabaseError('A transação foi revertida.', { cause: error, retryable: false });
+      if (error instanceof AppError) throw error;
+      throw new DatabaseError('Não foi possível concluir a transação.', { cause: error });
     } finally {
-      connection.release();
+      if (reusable) connection.release();
+      else connection.destroy();
     }
   }
 
@@ -116,54 +115,26 @@ export class MySqlDatabase implements Database {
     return this.pool.getConnection();
   }
 
-  private async executeWithRetry<T extends QueryResult>(
+  private async execute<T extends QueryResult>(
     sql: string,
     parameters: readonly DatabaseValue[],
   ): Promise<readonly [T, unknown]> {
     const startedAt = performance.now();
-    let attempt = 0;
-    while (attempt < 3) {
-      attempt += 1;
-      try {
-        const [result, fields] = await this.pool.execute(sql, [...parameters]);
-        const durationMs = performance.now() - startedAt;
-        this.logger.debug(
-          'Consulta executada.',
-          { durationMs, attempt, operation: sql.trimStart().split(/\s+/, 1)[0] },
-          'database',
-        );
-        if (durationMs >= 500) {
-          this.logger.performance('Consulta lenta.', durationMs, {
-            operation: sql.trimStart().split(/\s+/, 1)[0],
-          });
-        }
-        return [result as T, fields];
-      } catch (error) {
-        const code = errorCode(error);
-        const retryable = code !== undefined && transientCodes.has(code);
-        if (!retryable || attempt >= 3) {
-          this.logger.error(
-            'Falha ao executar consulta.',
-            error,
-            { attempt, code, operation: sql.trimStart().split(/\s+/, 1)[0] },
-            'database',
-          );
-          throw new DatabaseError('Não foi possível executar a operação no banco de dados.', {
-            cause: error,
-            details: { code, attempt },
-            retryable,
-          });
-        }
-        const delayMs = 100 * 2 ** (attempt - 1) + Math.floor(Math.random() * 50);
-        this.logger.warn('Falha transitória no banco; nova tentativa agendada.', {
-          attempt,
-          delayMs,
-          code,
-        });
-        await wait(delayMs);
-      }
+    const operation = sql.trimStart().split(/\s+/, 1)[0];
+    try {
+      const result = await this.pool.execute<T>(sql, [...parameters]);
+      const durationMs = performance.now() - startedAt;
+      this.logger.debug('Consulta executada.', { durationMs, operation }, 'database');
+      if (durationMs >= 500) this.logger.performance('Consulta lenta.', durationMs, { operation });
+      return result;
+    } catch (cause) {
+      const code = errorCode(cause);
+      this.logger.error('Falha ao executar consulta.', undefined, { code, operation }, 'database');
+      throw new DatabaseError('Não foi possível executar a operação no banco de dados.', {
+        cause,
+        details: { code },
+      });
     }
-    throw new DatabaseError('As tentativas de consulta foram esgotadas.');
   }
 }
 

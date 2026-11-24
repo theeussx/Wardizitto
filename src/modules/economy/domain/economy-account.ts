@@ -9,11 +9,9 @@ export interface EconomyAccount {
   readonly about: string;
 }
 
-export interface CooldownResult<T> {
-  readonly available: boolean;
-  readonly retryAfterMs: number;
-  readonly value?: T;
-}
+export type CooldownResult<T> =
+  | { readonly available: false; readonly retryAfterMs: number }
+  | { readonly available: true; readonly retryAfterMs: number; readonly value: T };
 
 export interface BalanceChange {
   readonly wallet: bigint;

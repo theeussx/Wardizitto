@@ -1,9 +1,11 @@
 const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
 
 module.exports = {
+  access: { guildOnly: true, guildPermissions: [PermissionsBitField.Flags.ManageRoles] },
   data: new SlashCommandBuilder()
     .setName('cargo')
     .setDescription('「Moderação」Adiciona um cargo a um membro.')
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles)
     .addUserOption((option) =>
       option.setName('usuário').setDescription('O membro que receberá o cargo.').setRequired(true),
     )
@@ -31,6 +33,18 @@ module.exports = {
             .setColor('Red')
             .setDescription('<:eg_cross:1353597108640415754> Membro não encontrado.'),
         ],
+        ephemeral: true,
+      });
+    }
+
+    if (
+      interaction.guild.ownerId !== interaction.user.id &&
+      (role.comparePositionTo(interaction.member.roles.highest) >= 0 ||
+        targetMember.id === interaction.guild.ownerId ||
+        targetMember.roles.highest.comparePositionTo(interaction.member.roles.highest) >= 0)
+    ) {
+      return interaction.reply({
+        content: 'Você não pode gerenciar esse cargo ou membro pela hierarquia do servidor.',
         ephemeral: true,
       });
     }

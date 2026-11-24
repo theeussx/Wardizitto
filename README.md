@@ -136,7 +136,7 @@ Leia:
 
 ## Qualidade e CI/CD
 
-Os quality gates estão disponíveis por `npm run validate`. Templates de CI, migrations em MySQL e publicação no GHCR ficam em `docs/workflows/`; copie-os para `.github/workflows/` quando a integração GitHub tiver permissão de Workflows/Actions.
+Execute `npm run validate` para rodar lint, formatação, tipagem, cobertura, build e validação de comandos. O [workflow de CI](.github/workflows/ci.yml) também executa os testes de integração em MySQL descartável, audita dependências e gera a imagem Docker localmente. O exemplo de publicação no GHCR fica em `docs/workflows/`.
 
 Commits seguem [Conventional Commits](https://www.conventionalcommits.org/) e são validados por Commitlint. Husky e lint-staged verificam arquivos alterados antes do commit.
 

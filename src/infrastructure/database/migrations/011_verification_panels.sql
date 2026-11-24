@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS verification_panels (
+  guild_id VARCHAR(20) NOT NULL PRIMARY KEY,
+  role_id VARCHAR(20) NOT NULL,
+  message_id VARCHAR(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

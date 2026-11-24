@@ -7,6 +7,7 @@ export class DiscordLifecycleService {
   private metricsTimer: NodeJS.Timeout | undefined;
   private readonly countTimers = new Map<string, NodeJS.Timeout>();
   private readonly webhook: WebhookClient | undefined;
+  private stopping = false;
 
   public constructor(
     private readonly client: WardizittoClient,
@@ -29,7 +30,9 @@ export class DiscordLifecycleService {
       status: 'online',
     });
     await this.commandRegistration.register();
+    if (this.isStopping()) return;
     await this.sendStatus('🟢 Bot online.');
+    if (this.isStopping()) return;
 
     this.metricsTimer = setInterval(() => {
       this.client.services.logger.info('Snapshot de métricas.', {
@@ -97,6 +100,7 @@ export class DiscordLifecycleService {
   }
 
   public async shutdown(): Promise<void> {
+    this.stopping = true;
     if (this.metricsTimer !== undefined) clearInterval(this.metricsTimer);
     for (const timer of this.countTimers.values()) clearTimeout(timer);
     this.countTimers.clear();
@@ -118,6 +122,7 @@ export class DiscordLifecycleService {
   }
 
   private debounce(key: string, work: () => Promise<void>): void {
+    if (this.stopping) return;
     const previous = this.countTimers.get(key);
     if (previous !== undefined) clearTimeout(previous);
     const timer = setTimeout(() => {
@@ -128,6 +133,10 @@ export class DiscordLifecycleService {
     }, 2_000);
     timer.unref();
     this.countTimers.set(key, timer);
+  }
+
+  private isStopping(): boolean {
+    return this.stopping;
   }
 
   private async sendStatus(content: string): Promise<void> {

@@ -1,3 +1,4 @@
+import type { Server } from 'node:http';
 import path from 'node:path';
 
 import { GatewayIntentBits, Options, Partials } from 'discord.js';
@@ -10,12 +11,14 @@ import { CooldownService, RateLimiter } from './services/rate-limiter.js';
 import type { AppConfig } from '../core/config/environment.js';
 import { Translator } from '../core/localization/translator.js';
 import { configurePrivilegedUsers } from '../core/security/owner.js';
+import { createDashboardServer } from '../dashboard/server.js';
 import { configureLegacyDatabase } from '../infrastructure/database/legacy.js';
 import { MigrationRunner } from '../infrastructure/database/migration-runner.js';
 import { SafeHttpClient } from '../infrastructure/http/safe-http-client.js';
 import { configureVirusTotal } from '../infrastructure/integrations/virus-total.js';
 import { AfkRepository } from '../infrastructure/repositories/afk-repository.js';
 import { CustomPermissionRepository } from '../infrastructure/repositories/custom-permission-repository.js';
+import { GuildConfigurationService } from '../modules/configuration/application/guild-configuration.js';
 import { EconomyService } from '../modules/economy/application/economy-service.js';
 import { MarriageService } from '../modules/social/application/marriage-service.js';
 import { WardizittoClient } from '../presentation/discord/client/wardizitto-client.js';
@@ -30,6 +33,8 @@ import { DiscordLifecycleService } from '../presentation/discord/services/discor
 export class WardizittoApplication {
   private readonly client: WardizittoClient;
   private readonly lifecycle: DiscordLifecycleService;
+  private readonly stopDiscordEvents: () => Promise<void>;
+  private dashboard: Server | undefined;
   private stopped = false;
 
   public constructor(
@@ -54,6 +59,7 @@ export class WardizittoApplication {
       }),
       metrics: new MetricsService(logger),
       afk,
+      guildConfiguration: new GuildConfigurationService(database, config.DEFAULT_LOCALE),
       economy: new EconomyService(database),
       marriages: new MarriageService(database),
     } as const;
@@ -65,6 +71,7 @@ export class WardizittoApplication {
     this.client = new WardizittoClient(
       {
         intents,
+        rest: { retries: 0 },
         partials: [Partials.Channel, Partials.Message],
         allowedMentions: { parse: ['users', 'roles'], repliedUser: false },
         makeCache: Options.cacheWithLimits({
@@ -91,7 +98,12 @@ export class WardizittoApplication {
     this.lifecycle = new DiscordLifecycleService(this.client, registration);
     const interactions = new InteractionRouter(this.client, new ComponentRegistry());
     const messages = new MessageRouter(this.client);
-    registerDiscordEvents(this.client, interactions, messages, this.lifecycle);
+    this.stopDiscordEvents = registerDiscordEvents(
+      this.client,
+      interactions,
+      messages,
+      this.lifecycle,
+    );
 
     const http = new SafeHttpClient({
       timeoutMs: config.HTTP_TIMEOUT_MS,
@@ -102,27 +114,98 @@ export class WardizittoApplication {
 
   public async start(): Promise<void> {
     await this.database.connect();
+    if (this.isStopped()) return;
     if (this.config.DB_MIGRATE_ON_START) {
       const applied = await new MigrationRunner(this.database, this.logger).migrate();
       this.logger.info('Migrations verificadas.', { applied }, 'database');
     }
+    if (this.isStopped()) return;
 
     const modulesDirectory = path.resolve(__dirname, '../modules');
     await new CommandRegistry(this.client, modulesDirectory).load();
+    if (this.isStopped()) return;
     await this.client.login(this.config.DISCORD_TOKEN);
+    if (this.isStopped()) return;
+    await this.startDashboard();
   }
 
   public async stop(reason: string): Promise<void> {
     if (this.stopped) return;
     this.stopped = true;
+    const drain = this.stopDiscordEvents();
+    const closeDashboard = this.closeDashboard();
     this.logger.info('Encerramento gracioso iniciado.', { reason });
+    await Promise.all([drain, closeDashboard]);
     await this.lifecycle
       .shutdown()
       .catch((error: unknown) => this.logger.error('Falha ao finalizar serviços Discord.', error));
-    await this.client.destroy();
-    await this.database
-      .close()
-      .catch((error: unknown) => this.logger.error('Falha ao encerrar banco de dados.', error));
+    try {
+      await this.client.destroy();
+    } finally {
+      await this.database.close();
+    }
     this.logger.info('Aplicação encerrada.', { reason });
+  }
+
+  private isStopped(): boolean {
+    return this.stopped;
+  }
+
+  private async startDashboard(): Promise<void> {
+    const {
+      DASHBOARD_PUBLIC_ORIGIN,
+      DASHBOARD_DISCORD_CLIENT_ID,
+      DASHBOARD_DISCORD_CLIENT_SECRET,
+      DASHBOARD_PORT,
+      DASHBOARD_HOST,
+    } = this.config;
+    if (
+      !DASHBOARD_PUBLIC_ORIGIN ||
+      !DASHBOARD_DISCORD_CLIENT_ID ||
+      !DASHBOARD_DISCORD_CLIENT_SECRET
+    )
+      return;
+
+    try {
+      const dashboard = createDashboardServer({
+        publicOrigin: DASHBOARD_PUBLIC_ORIGIN,
+        clientId: DASHBOARD_DISCORD_CLIENT_ID,
+        clientSecret: DASHBOARD_DISCORD_CLIENT_SECRET,
+        guildConfiguration: this.client.services.guildConfiguration,
+        isBotInGuild: (id) =>
+          this.client.isReady() && this.client.guilds.cache.get(id)?.available === true,
+        onError: (event) =>
+          this.logger.warn('Falha em solicitação do dashboard.', { event }, 'api'),
+      });
+      this.dashboard = dashboard;
+      await new Promise<void>((resolve, reject) => {
+        dashboard.once('error', reject);
+        dashboard.listen(DASHBOARD_PORT, DASHBOARD_HOST, () => {
+          dashboard.off('error', reject);
+          dashboard.on('error', (error) =>
+            this.logger.error('Falha no servidor do dashboard.', error, {}, 'api'),
+          );
+          resolve();
+        });
+      });
+      if (this.isStopped()) {
+        await this.closeDashboard();
+        return;
+      }
+      this.logger.info('Dashboard disponível.', { port: DASHBOARD_PORT }, 'api');
+    } catch (error) {
+      this.logger.error('Não foi possível iniciar o dashboard.', error, {}, 'api');
+    }
+  }
+
+  private async closeDashboard(): Promise<void> {
+    const dashboard = this.dashboard;
+    if (dashboard?.listening !== true) return;
+    await new Promise<void>((resolve) => {
+      dashboard.close((error) => {
+        if (error) this.logger.error('Falha ao encerrar o dashboard.', error, {}, 'api');
+        resolve();
+      });
+    });
   }
 }

@@ -36,6 +36,11 @@ const environmentSchema = z
     DISCORD_PREFIX: z.string().min(1).max(5).default('!'),
     DISCORD_INTENT_GUILD_MEMBERS: booleanValue(true),
     DISCORD_INTENT_MESSAGE_CONTENT: booleanValue(true),
+    DASHBOARD_PUBLIC_ORIGIN: optionalUrl,
+    DASHBOARD_DISCORD_CLIENT_ID: optionalDiscordId,
+    DASHBOARD_DISCORD_CLIENT_SECRET: optionalNonEmptyString,
+    DASHBOARD_HOST: z.string().min(1).default('127.0.0.1'),
+    DASHBOARD_PORT: z.coerce.number().int().min(1).max(65_535).default(8080),
     DB_HOST: z.string().min(1, 'é obrigatório'),
     DB_PORT: z.coerce.number().int().min(1).max(65_535).default(3306),
     DB_USER: z.string().min(1, 'é obrigatório'),
@@ -81,6 +86,38 @@ const environmentSchema = z
         path: ['DISCORD_GUILD_ID'],
         message: 'é obrigatório quando DISCORD_GLOBAL_COMMANDS=false',
       });
+    }
+    if (value.DASHBOARD_PUBLIC_ORIGIN !== undefined) {
+      const url = URL.parse(value.DASHBOARD_PUBLIC_ORIGIN);
+      const isLoopback = url !== null && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+      const isSecure =
+        url?.protocol === 'https:' ||
+        (value.NODE_ENV !== 'production' && url?.protocol === 'http:' && isLoopback);
+      if (
+        url === null ||
+        !isSecure ||
+        url.username ||
+        url.password ||
+        url.pathname !== '/' ||
+        url.search ||
+        url.hash
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['DASHBOARD_PUBLIC_ORIGIN'],
+          message: 'informe apenas a origem HTTPS, ou HTTP local em desenvolvimento',
+        });
+      }
+      if (
+        value.DASHBOARD_DISCORD_CLIENT_ID === undefined ||
+        value.DASHBOARD_DISCORD_CLIENT_SECRET === undefined
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['DASHBOARD_DISCORD_CLIENT_ID'],
+          message: 'configure o ID e o segredo do cliente OAuth do dashboard',
+        });
+      }
     }
   });
 

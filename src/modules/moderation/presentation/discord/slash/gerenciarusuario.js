@@ -19,7 +19,12 @@ module.exports = {
 
   async execute(interaction) {
     const target = interaction.options.getMember('usuario');
-    if (!target || target.user.bot || target.id === interaction.user.id) {
+    if (
+      !target ||
+      target.user.bot ||
+      target.id === interaction.user.id ||
+      target.id === interaction.guild.ownerId
+    ) {
       return interaction.reply({
         content: '❌ Selecione outro membro válido.',
         flags: MessageFlags.Ephemeral,

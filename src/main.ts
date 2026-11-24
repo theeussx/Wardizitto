@@ -14,26 +14,41 @@ const bootstrap = async (): Promise<void> => {
   const database = new MySqlDatabase(config, logger);
   const application = new WardizittoApplication(config, logger, database);
 
-  const shutdown = (reason: string): void => {
-    void application.stop(reason).finally(() => {
-      process.exitCode = reason === 'SIGINT' || reason === 'SIGTERM' ? 0 : 1;
+  let stopping: Promise<void> | undefined;
+  const shutdown = (reason: string, fatal: boolean): Promise<void> => {
+    if (fatal) process.exitCode = 1;
+    if (stopping) return stopping;
+    const deadline = setTimeout(() => {
+      process.stderr.write('O Wardizitto excedeu o prazo de encerramento.\n');
+      process.exit(1);
+    }, 10_000);
+    deadline.unref();
+    stopping = application.stop(reason).catch((error: unknown) => {
+      process.exitCode = 1;
+      logger.error('Falha durante o encerramento do Wardizitto.', error);
     });
+    return stopping;
   };
 
-  process.once('SIGINT', () => shutdown('SIGINT'));
-  process.once('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('unhandledRejection', (error) =>
-    logger.error('Promise rejeitada sem tratamento.', error),
-  );
+  process.once('SIGINT', () => void shutdown('SIGINT', false));
+  process.once('SIGTERM', () => void shutdown('SIGTERM', false));
+  process.on('unhandledRejection', (error) => {
+    logger.error('Promise rejeitada sem tratamento.', error);
+    void shutdown('unhandledRejection', true);
+  });
   process.once('uncaughtException', (error) => {
     logger.error('Exceção não capturada; encerramento seguro solicitado.', error);
-    shutdown('uncaughtException');
+    void shutdown('uncaughtException', true);
   });
 
   try {
     await application.start();
   } catch (error) {
-    await application.stop('startup-failure');
+    if (stopping !== undefined) {
+      await stopping;
+      return;
+    }
+    await shutdown('startup-failure', true);
     throw error;
   }
 };

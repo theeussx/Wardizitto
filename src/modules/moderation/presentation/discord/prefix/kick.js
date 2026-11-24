@@ -11,6 +11,14 @@ module.exports = {
     const target = message.mentions.members.first();
     if (!target) return message.reply('❌ Mencione o usuário que deseja expulsar.');
 
+    if (
+      target.id === message.guild.ownerId ||
+      (message.author.id !== message.guild.ownerId &&
+        target.roles.highest.comparePositionTo(message.member.roles.highest) >= 0)
+    ) {
+      return message.reply('❌ Você não pode moderar este membro pela hierarquia do servidor.');
+    }
+
     if (!target.kickable)
       return message.reply('❌ Eu não posso expulsar este usuário (cargo superior ao meu).');
 
@@ -29,10 +37,10 @@ module.exports = {
           ),
         );
 
-      message.reply({ components: [container], flags: MessageFlags.IsComponentsV2 });
+      return await message.reply({ components: [container], flags: MessageFlags.IsComponentsV2 });
     } catch (error) {
       message.client.services.logger.error('Erro em handler de compatibilidade.', error);
-      message.reply('❌ Ocorreu um erro ao tentar expulsar o membro.');
+      return message.reply('❌ Ocorreu um erro ao tentar expulsar o membro.');
     }
   },
 };

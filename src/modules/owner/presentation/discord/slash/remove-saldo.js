@@ -34,6 +34,7 @@ module.exports = {
       target.id,
       -amount,
       source,
+      interaction.id,
     );
     interaction.client.services.logger.audit('Saldo administrativo removido.', {
       actorId: interaction.user.id,

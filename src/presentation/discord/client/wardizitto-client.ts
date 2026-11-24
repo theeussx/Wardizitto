@@ -7,6 +7,7 @@ import type { CooldownService, RateLimiter } from '../../../application/services
 import type { AppConfig } from '../../../core/config/environment.js';
 import type { Translator } from '../../../core/localization/translator.js';
 import type { AfkRepository } from '../../../infrastructure/repositories/afk-repository.js';
+import type { GuildConfigurationService } from '../../../modules/configuration/application/guild-configuration.js';
 import type { EconomyService } from '../../../modules/economy/application/economy-service.js';
 import type { MarriageService } from '../../../modules/social/application/marriage-service.js';
 import type { PrefixCommand, SlashCommand } from '../types/command.js';
@@ -20,6 +21,7 @@ export interface DiscordServices {
   readonly rateLimiter: RateLimiter;
   readonly metrics: MetricsService;
   readonly afk: AfkRepository;
+  readonly guildConfiguration: GuildConfigurationService;
   readonly economy: EconomyService;
   readonly marriages: MarriageService;
 }
